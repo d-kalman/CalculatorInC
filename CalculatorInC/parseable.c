@@ -35,3 +35,10 @@ void print_parseable(Parseable p)
 	else
 		printf("%c ", p.operation);
 }
+
+void print_parseable_list(Parseable* parseables, int size)
+{
+	for (int i = 0; i < size; ++i) {
+		print_parseable(parseables[i]);
+	}
+}

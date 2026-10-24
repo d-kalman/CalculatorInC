@@ -9,12 +9,8 @@ int allowed_followup_operation(char c);
 int operator_precedence(char op);
 int operator_preceeds(char op1, char op2);
 
-int parse(char* string, int size, Parseable ** out_parseable, int* out_parsed_size, double previous_answer);
-double process_line(char* string, int size, double answer);
-double resolve(Parseable* parseables);
+int parse(const char* string, int size, Parseable ** out_parseable, int* out_parsed_size, double previous_answer);
+int process_line(const char* string, int size, double* answer);
+int resolve(Parseable* parseables, double* out_answer);
 
-
-
-void operator_tests();
-int parsing_tests();
-int resolve_tests();
+int validate_logic(double lo, double ro, char operation);
