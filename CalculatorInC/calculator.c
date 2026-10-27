@@ -357,6 +357,8 @@ int validate_logic(double lo, double ro, char operation) {
 		double intpart;
 		if (modf(fabs(ro), &intpart) != 0.0)
 			return 0;
+		else
+			return 1;
 	}
 	else {
 		return 1;

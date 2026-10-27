@@ -160,6 +160,7 @@ void run_resolve_test_suite()
 		{ "2 ^ 3 ^ 2",            512,     NO_ERROR, 0, 0  }, //right associativity
 		{ "(2 ^ 3) ^ 2",          64,     NO_ERROR, 0, 0  },
 		{ "2 ^ 3 x 2",            16,     NO_ERROR, 0, 0  },
+		{ "(-1) ^ 3",            -1,     NO_ERROR, 0, 0  },
 		//Logical errors
 		{ "(-8) ^ (1 / 3)",       0,     LOGICAL_ERROR, 0, 0  }, // restricted domain
 		{ "1/0",			  0,     LOGICAL_ERROR, 0, 0}, // division by zero
@@ -211,7 +212,7 @@ int run_resolve_test(const char* expression, double expected_result,
 		test_result = 1;
 	}
 	else {
-		printf("Test %d failed: EC %d\n", id, error_code);
+		printf("Test %d failed: %s with EC %d\n", id, expression, error_code);
 	}
 	free(parseables);
 	parseables = NULL;
