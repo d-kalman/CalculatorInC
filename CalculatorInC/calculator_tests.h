@@ -8,8 +8,13 @@ int run_parsing_test(const char* expression,
 					int expected_result_length, 
 					int expected_error_code, 
 					double previous_answer, 
+					int has_previous_answer,
 					int line);
 void run_resolve_test_suite();
-int run_resolve_test(const char* expression, const double expected_result, int expected_error_code, int id);
+int run_resolve_test(const char* expression, const double expected_result, 
+						int expected_error_code, 
+						double previous_answer, 
+						int has_previous_answer, 
+						int id);
 void run_operator_test_suite();
 int run_operator_test(char op1, char op2, int expected_precedence);

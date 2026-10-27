@@ -17,6 +17,7 @@ int main(int argc, char** argv)
 	else {
 		char line[120];
 		double answer = 0;
+		int has_previous_answer = 0;
 		while (fgets(line, sizeof(line), stdin) != NULL) {
 			if (strchr(line, '\n') == NULL && !feof(stdin)) {
 				while (getchar() != '\n' && !feof(stdin)) {}
@@ -33,7 +34,7 @@ int main(int argc, char** argv)
 				continue;
 
 			int length = (int)strlen(line);
-			int error_code = process_line(line, length, &answer);
+			int error_code = process_line(line, length, &answer, &has_previous_answer);
 			if (error_code == NO_ERROR) {
 				printf("Answer: %.10g\n", answer);
 			}

@@ -9,6 +9,8 @@
 
 int operator_precedence(char op) {
 	switch (op) {
+	case '~':
+		return 4;
 	case 'x':
 	case '/':
 		return 2;
@@ -27,7 +29,7 @@ int operator_preceeds(char op1, char op2) {
 		return 0;
 }
 
-int parse(const char* string, int size, Parseable** out_parseable, int* out_parsed_size, double previous_answer) {
+int parse(const char* string, int size, Parseable** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer) {
 
 	Parseable* parseables = (Parseable*)malloc(MAX_EXPRESSION_LENGTH * sizeof(Parseable));
 	*out_parsed_size = 0;
@@ -46,16 +48,17 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 	int number_index = 0;
 	//An operator needs both a left and a right operand.
 	int operator_expected = 0;
-	//Discard beginning whitespace
+	//Discard leading whitespace
 	int begin = 0;
 	while (string[begin] == ' ' && begin < size) {
 		begin++;
 	}
 	//If the line reuses the previous answer, insert it as the first parseable
-	if (allowed_followup_operation(string[begin])) {
+	if (allowed_followup_operation(string[begin]) && has_previous_answer) {
 		Parseable p = { .number = previous_answer, .operation = '#' };
 		parseables[end] = p;
 		end++;
+		operator_expected = 1;
 	}
 
 	for (int i = begin; i < size && end < MAX_EXPRESSION_LENGTH - 1; ++i) {
@@ -102,28 +105,46 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 			}
 			operator_expected = 1;
 		}
-
-
-		//Bracket or operator: process number buffer, if not empty, add to the parseable list
+		//Bracket or operator:
 		//decide on the operator
 		//Logic on operator:
 		//Take the next operator
 		//If the stack top precedence is higher push top to output
 		//If same due to left right precedence push top to output
 		else {
-	
-			//If we find an operator but a number or an opening bracket is expected
-			if (operator_expected == 0 && current_char != '(') {
-				free(parseables);
-				*out_parseable = NULL;
-				return PARSING_ERROR;
-			}
 			Parseable current_operator = { .number = 0.0, .operation = current_char };
-			//Push opening on operator stack
-			if (current_operator.operation == '(')
-			{
-				push_to_stack(operator_stack_p, current_operator);
-				operator_expected = 0;
+			//If we find an operator when operand expected
+			//It can be either a unary operator or a '('
+			if (operator_expected == 0) {
+				//Push opening on operator stack
+				if (current_char == '(') {
+					push_to_stack(operator_stack_p, current_operator);
+					operator_expected = 0;
+				}
+				//Decide if chained subtract or unary operator
+				else if (current_char == '-') {
+					//Chained subtract
+					if (has_previous_answer) {
+						push_to_stack(operator_stack_p, current_operator);
+						operator_expected = 0;
+					}
+					//Unary operator
+					else {
+						current_operator.operation = '~';
+						push_to_stack(operator_stack_p, current_operator);
+						operator_expected = 0;
+					}
+
+				}
+				//Unary + operator: skip
+				else if (current_char == '+') {
+					continue;
+				}
+				else {
+					free(parseables);
+					*out_parseable = NULL;
+					return PARSING_ERROR;
+				}
 			}
 			//If closing bracket: pop operators until opening found
 			else if (current_operator.operation == ')')
@@ -198,14 +219,18 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 }
 
 //Changes answer only on success
-int process_line(const char* string, int size, double* answer)
+int process_line(const char* string, int size, double* answer, int* has_previous_answer)
 {
 	Parseable* parseable_list = NULL;
 	int list_size = 0;
-	int error_code = parse(string, size, &parseable_list, &list_size, *answer);
+	
+	int error_code = parse(string, size, &parseable_list, &list_size, *answer, *has_previous_answer);
 
 	if (error_code == NO_ERROR) {
 		error_code = resolve(parseable_list, answer);
+		if (error_code == NO_ERROR) {
+			*has_previous_answer = 1;
+		}
 		free(parseable_list);
 	}
 	else if (error_code && parseable_list != NULL) {
@@ -217,6 +242,8 @@ int process_line(const char* string, int size, double* answer)
 double resolve_operation(double lo, double ro, char operation)
 {
 	switch (operation) {
+	case '~':
+		return -1 * ro;
 	case '+':
 		return lo + ro;
 	case '-':
@@ -242,8 +269,12 @@ int resolve(Parseable* parseables, double* out_answer) {
 			push_to_stack(stack_p, p);
 		}
 		else {
-			double ro = pop_stack(stack_p).number;
-			double lo = pop_stack(stack_p).number;
+			double ro = 0;
+			double lo = 0;
+			ro = pop_stack(stack_p).number;
+			if (p.operation != '~') {
+				lo = pop_stack(stack_p).number;
+			}			
 			if (!validate_logic(lo, ro, p.operation)) {
 				return LOGICAL_ERROR;
 			}
