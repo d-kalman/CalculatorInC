@@ -25,7 +25,8 @@ void run_operator_test_suite()
 }
 int run_operator_test(char op1, char op2, int expected_precedence)
 {
-	if (operator_preceeds(op1, op2) == expected_precedence)
+
+	if (operator_preceeds(op1, op2, operator_associativity(op2)) == expected_precedence)
 		return 1;
 	else
 		return 0;
@@ -139,20 +140,30 @@ int run_parsing_test(const char* expression,
 void run_resolve_test_suite()
 {
 	static const struct { const char* expression; double expected; int error_code; double previous_answer; int has_previous_answer; } cases[] = {
+		//Basic arithmetics
 		{ "1.0 + 2.00",       3.0,   NO_ERROR, 0, 0     },
 		{ "1.5+2.11x3.2-4.1", 4.152, NO_ERROR, 0, 0     },
 		{ "2+3x4",            14.0,  NO_ERROR, 0, 0     },
 		{ "(2+3)x4",          20.0,  NO_ERROR, 0, 0     },
 		{ "10/4",             2.5,   NO_ERROR, 0, 0     },
+		//Unary operator and chaining
 		{ "-5x3",            -15,    NO_ERROR, 0, 0     },
 		{ "-3x4",            -7,     NO_ERROR, 5, 1     },
 		{ "-3x-3",            9,     NO_ERROR, 0, 0     },
 		{ "(-2)x(-2)",        4,     NO_ERROR, 0, 0     },
 		{ "(-2)x8",          -16,    NO_ERROR, 0, 0     },
 		{ "--(-3.451)",      -3.451, NO_ERROR, 0, 0     },
-		{ "+-(+137.8651)",   -137.8651, NO_ERROR, 0, 0     },
-		{ "1/0",			  0,     LOGICAL_ERROR, 0, 0}
-
+		{ "+-(+137.8651)",   -137.8651, NO_ERROR, 0, 0  },
+		//Exponentiation
+		{ "2^10",             1024, NO_ERROR, 0, 0  }, //basic
+		{ "4^0.5",            2,     NO_ERROR, 0, 0  }, //root
+		{ "2 ^ 3 ^ 2",            512,     NO_ERROR, 0, 0  }, //right associativity
+		{ "(2 ^ 3) ^ 2",          64,     NO_ERROR, 0, 0  },
+		{ "2 ^ 3 x 2",            16,     NO_ERROR, 0, 0  },
+		//Logical errors
+		{ "(-8) ^ (1 / 3)",       0,     LOGICAL_ERROR, 0, 0  }, // restricted domain
+		{ "1/0",			  0,     LOGICAL_ERROR, 0, 0}, // division by zero
+		{ "(-1)^0.5",			  0,     LOGICAL_ERROR, 0, 0 } //sqrt of -1
 	};
 	int tests_passed = 0;
 	int tests_run = (int)(sizeof(cases) / sizeof(cases[0]));
