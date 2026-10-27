@@ -212,7 +212,7 @@ int run_resolve_test(const char* expression, double expected_result,
 		test_result = 1;
 	}
 	else {
-		printf("Test %d failed: %s with EC %d\n", id, expression, error_code);
+		printf("Test %d failed: %s with EC %d \n", id, expression, error_code);
 	}
 	free(parseables);
 	parseables = NULL;

@@ -52,7 +52,7 @@ char operator_associativity(char op) {
 	return associativity;
 }
 
-int parse(const char* string, int size, Parseable** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer) {
+int parse(const char* string, size_t size, Parseable** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer) {
 
 	Parseable* parseables = (Parseable*)malloc(MAX_EXPRESSION_LENGTH * sizeof(Parseable));
 	*out_parsed_size = 0;
@@ -197,6 +197,8 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 						operator_associativity(current_operator.operation)))
 				{
 					if (end >= MAX_EXPRESSION_LENGTH - 1) {
+						free(parseables);
+						*out_parseable = NULL;
 						return PARSING_ERROR;
 
 					}
@@ -224,6 +226,8 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 	//Empty out the operator stack too
 	while (!is_empty(operator_stack_p)) {
 		if (end >= MAX_EXPRESSION_LENGTH - 1) {
+			free(parseables);
+			*out_parseable = NULL;
 			return PARSING_ERROR;
 		}
 		//Unmatched bracket, error

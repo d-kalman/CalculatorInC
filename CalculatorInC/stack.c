@@ -8,14 +8,11 @@ void initialize_stack(Stack* stack) {
 }
 int push_to_stack(Stack* stack, Parseable p) {
 	int error_code = 0;
-	int top = stack->top;
 	if (is_full(stack)) {
 		error_code = 1;
 	}
 	else {
-		top++;
-		stack->parseable_stack[top] = p;
-		stack->top++;
+		stack->parseable_stack[++stack->top] = p;
 	}
 	return error_code;
 }
@@ -47,9 +44,7 @@ Parseable pop_stack(Stack* stack) {
 		return p;
 	}
 	else {
-		int top = stack->top;
-		p = stack->parseable_stack[top];
-		stack->top--;
+		p = stack->parseable_stack[stack->top--];
 		return p;
 	}
 }

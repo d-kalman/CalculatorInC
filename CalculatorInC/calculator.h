@@ -26,7 +26,7 @@ int operator_precedence(char op);
 int operator_preceeds(char op1, char op2, char associativity);
 char operator_associativity(char op);
 
-int parse(const char* string, int size, Parseable ** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer);
+int parse(const char* string, size_t size, Parseable ** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer);
 int process_line(const char* string, int size, double* answer, int* has_previous_answer);
 int resolve(Parseable* parseables, double* out_answer);
 
