@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <string.h>
+#include <math.h>
 
 #include "calculator_util.h"
 #include "stack.h"
@@ -9,8 +10,10 @@
 
 int operator_precedence(char op) {
 	switch (op) {
-	case '~':
+	case '^':
 		return 4;
+	case '~':
+		return 3;
 	case 'x':
 	case '/':
 		return 2;
@@ -22,11 +25,31 @@ int operator_precedence(char op) {
 	}
 }
 
-int operator_preceeds(char op1, char op2) {
-	if (operator_precedence(op1) >= operator_precedence(op2))
-		return 1;
-	else
-		return 0;
+int operator_preceeds(char op1, char op2, char associativity) {
+	int preceeds = 0;
+	if (associativity == 'R')
+	{
+		if (operator_precedence(op1) > operator_precedence(op2))
+			preceeds = 1;
+		else
+			preceeds = 0;
+	}
+	else {
+		if (operator_precedence(op1) >= operator_precedence(op2)) {
+			preceeds = 1;
+		}
+		else {
+			preceeds = 0;
+		}
+	}
+	return preceeds;
+}
+
+char operator_associativity(char op) {
+	char associativity = 'L';
+	if (op == '^')
+		associativity = 'R';
+	return associativity;
 }
 
 int parse(const char* string, int size, Parseable** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer) {
@@ -76,8 +99,8 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 				*out_parseable = NULL;
 				return PARSING_ERROR;
 			}
-			while (i < size && 
-					(string[i] == '.' || (string[i] >= '0' && string[i] <= '9'))) {
+			while (i < size &&
+				(string[i] == '.' || (string[i] >= '0' && string[i] <= '9'))) {
 				number[number_index] = string[i];
 				number_index++;
 				if (number_index >= MAX_NUMBER_LENGTH) {
@@ -169,7 +192,10 @@ int parse(const char* string, int size, Parseable** out_parseable, int* out_pars
 			//Any other operator
 			else if (allowed_input_operation(current_operator.operation)) {
 				while (!is_empty(operator_stack_p) &&
-					operator_preceeds(inspect(operator_stack_p).operation, current_operator.operation)) {
+					operator_preceeds(inspect(operator_stack_p).operation,
+						current_operator.operation,
+						operator_associativity(current_operator.operation)))
+				{
 					if (end >= MAX_EXPRESSION_LENGTH - 1) {
 						return PARSING_ERROR;
 
@@ -223,7 +249,7 @@ int process_line(const char* string, int size, double* answer, int* has_previous
 {
 	Parseable* parseable_list = NULL;
 	int list_size = 0;
-	
+
 	int error_code = parse(string, size, &parseable_list, &list_size, *answer, *has_previous_answer);
 
 	if (error_code == NO_ERROR) {
@@ -242,6 +268,8 @@ int process_line(const char* string, int size, double* answer, int* has_previous
 double resolve_operation(double lo, double ro, char operation)
 {
 	switch (operation) {
+	case '^':
+		return pow(lo, ro);
 	case '~':
 		return -1 * ro;
 	case '+':
@@ -274,7 +302,7 @@ int resolve(Parseable* parseables, double* out_answer) {
 			ro = pop_stack(stack_p).number;
 			if (p.operation != '~') {
 				lo = pop_stack(stack_p).number;
-			}			
+			}
 			if (!validate_logic(lo, ro, p.operation)) {
 				return LOGICAL_ERROR;
 			}
@@ -300,6 +328,7 @@ int allowed_input_operation(char c)
 	switch (c) {
 	case '(':
 	case ')':
+	case '^':
 		allowed++;
 		break;
 	default:
@@ -319,8 +348,17 @@ int allowed_followup_operation(char c) {
 	}
 }
 int validate_logic(double lo, double ro, char operation) {
+	//Division by 0
 	if (ro == 0 && operation == '/')
 		return 0;
-	else
+	//Non integer root of a negative number is not allowed
+	else if (operation == '^' && lo < 0.0) {
+		// Check if exponent is integer
+		double intpart;
+		if (modf(fabs(ro), &intpart) != 0.0)
+			return 0;
+	}
+	else {
 		return 1;
+	}
 }
