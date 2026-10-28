@@ -185,6 +185,7 @@
     <ClCompile Include="rpn_transformer.c" />
     <ClCompile Include="token.c" />
     <ClCompile Include="stack.c" />
+    <ClCompile Include="thread_pool.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="calculator.h" />
@@ -196,6 +197,7 @@
     <ClInclude Include="token.h" />
     <ClInclude Include="stack.h" />
     <ClInclude Include="calculator_util.h" />
+    <ClInclude Include="thread_pool.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="test_files\batch_test.txt" />
