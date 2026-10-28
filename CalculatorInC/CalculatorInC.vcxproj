@@ -182,13 +182,16 @@
     <ClCompile Include="calculator_util.c" />
     <ClCompile Include="parseable.c" />
     <ClCompile Include="stack.c" />
+    <ClCompile Include="thread_pool.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="calculator.h" />
+    <ClInclude Include="calculator_in_c.h" />
     <ClInclude Include="calculator_tests.h" />
     <ClInclude Include="parseable.h" />
     <ClInclude Include="stack.h" />
     <ClInclude Include="calculator_util.h" />
+    <ClInclude Include="thread_pool.h" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="test_files\batch_test.txt" />
