@@ -190,6 +190,9 @@
     <ClInclude Include="stack.h" />
     <ClInclude Include="calculator_util.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="test_files\batch_test.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
