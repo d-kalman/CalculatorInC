@@ -52,6 +52,57 @@ char operator_associativity(char op) {
 	return associativity;
 }
 
+int add_parseable(Parseable* parseables, int* end, size_t capacity, Parseable p) {
+	int error_code = 0;
+	if (*end >= capacity - 1) {
+		error_code = PARSING_ERROR;
+	}
+	parseables[*end] = p;
+	(*end)++;
+	return error_code;
+}
+
+int parse_number(char* string, size_t string_size, int* string_index, Parseable* parseables, int* parseables_end, int* operator_expected) {
+	int number_index = 0;
+	char number[MAX_NUMBER_LENGTH] = { '#' };
+
+	int l_string_index = *string_index;
+	int l_parseables_end = *parseables_end;
+
+	int error_code = NO_ERROR;
+	if (*operator_expected == 1) {
+		error_code = PARSING_ERROR;
+	}
+	while (l_string_index < string_size &&
+		(string[l_string_index] == '.' || (string[l_string_index] >= '0' && string[l_string_index] <= '9'))) {
+		number[number_index] = string[l_string_index];
+		number_index++;
+		if (number_index >= MAX_NUMBER_LENGTH) {
+			error_code = INPUT_ERROR;
+		}
+		++l_string_index;
+	}
+	--l_string_index;
+	if (number_index > 0)
+	{
+		number[number_index] = '\0';
+		double num = atof(number);
+		number_index = 0;
+		//Add number to the output
+		Parseable p = { .number = num, .operation = '#' };
+		/*if (l_parseables_end >= MAX_EXPRESSION_LENGTH - 1) {
+			error_code = PARSING_ERROR;
+		}
+		parseables[l_parseables_end] = p;
+		l_parseables_end++;*/
+		error_code = add_parseable(parseables, &l_parseables_end, MAX_EXPRESSION_LENGTH, p);
+	}
+	*operator_expected = 1;
+	*string_index = l_string_index;
+	*parseables_end = l_parseables_end;
+	return error_code;
+}
+
 int parse(const char* string, size_t size, Parseable** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer) {
 
 	Parseable* parseables = (Parseable*)malloc(MAX_EXPRESSION_LENGTH * sizeof(Parseable));
@@ -67,8 +118,6 @@ int parse(const char* string, size_t size, Parseable** out_parseable, int* out_p
 	initialize_stack(operator_stack_p);
 
 	int end = 0;
-	char number[MAX_NUMBER_LENGTH] = { '#' };
-	int number_index = 0;
 	int error_code = NO_ERROR;
 	//An operator needs both a left and a right operand.
 	int operator_expected = 0;
@@ -80,8 +129,9 @@ int parse(const char* string, size_t size, Parseable** out_parseable, int* out_p
 	//If the line reuses the previous answer, insert it as the first parseable
 	if (allowed_followup_operation(string[begin]) && has_previous_answer) {
 		Parseable p = { .number = previous_answer, .operation = '#' };
-		parseables[end] = p;
-		end++;
+		error_code = add_parseable(parseables, &end, MAX_EXPRESSION_LENGTH, p);
+		if (error_code != 0)
+			goto cleanup_on_error;
 		operator_expected = 1;
 	}
 
@@ -99,32 +149,11 @@ int parse(const char* string, size_t size, Parseable** out_parseable, int* out_p
 				error_code = PARSING_ERROR;
 				goto cleanup_on_error;
 			}
-			while (i < size &&
-				(string[i] == '.' || (string[i] >= '0' && string[i] <= '9'))) {
-				number[number_index] = string[i];
-				number_index++;
-				if (number_index >= MAX_NUMBER_LENGTH) {
-					error_code = INPUT_ERROR;
+			else {
+				error_code = parse_number(string, size, &i, parseables, &end, &operator_expected);
+				if (error_code != 0)
 					goto cleanup_on_error;
-				}
-				++i;
 			}
-			--i;
-			if (number_index > 0)
-			{
-				number[number_index] = '\0';
-				double num = atof(number);
-				number_index = 0;
-				//Add number to the output
-				Parseable p = { .number = num, .operation = '#' };
-				if (end >= MAX_EXPRESSION_LENGTH - 1) {
-					error_code = PARSING_ERROR;
-					goto cleanup_on_error;
-				}
-				parseables[end] = p;
-				end++;
-			}
-			operator_expected = 1;
 		}
 		//Bracket or operator:
 		//decide on the operator
@@ -155,7 +184,6 @@ int parse(const char* string, size_t size, Parseable** out_parseable, int* out_p
 						push_to_stack(operator_stack_p, current_operator);
 						operator_expected = 0;
 					}
-
 				}
 				//Unary + operator: skip
 				else if (current_char == '+') {
@@ -192,12 +220,9 @@ int parse(const char* string, size_t size, Parseable** out_parseable, int* out_p
 						current_operator.operation,
 						operator_associativity(current_operator.operation)))
 				{
-					if (end >= MAX_EXPRESSION_LENGTH - 1) {
-						error_code = PARSING_ERROR;
+					error_code = add_parseable(parseables, &end, MAX_EXPRESSION_LENGTH, pop_stack(operator_stack_p));
+					if (error_code != 0)
 						goto cleanup_on_error;
-					}
-					parseables[end] = pop_stack(operator_stack_p);
-					end++;
 				}
 				push_to_stack(operator_stack_p, current_operator);
 				operator_expected = 0;
@@ -218,18 +243,14 @@ int parse(const char* string, size_t size, Parseable** out_parseable, int* out_p
 
 	//Empty out the operator stack too
 	while (!is_empty(operator_stack_p)) {
-		if (end >= MAX_EXPRESSION_LENGTH - 1) {
-			error_code = PARSING_ERROR;
-			goto cleanup_on_error;
-		}
 		//Unmatched bracket, error
 		if (inspect(operator_stack_p).operation == '(') {
 			error_code = PARSING_ERROR;
 			goto cleanup_on_error;
 		}
-
-		parseables[end] = pop_stack(operator_stack_p);
-		end++;
+		error_code = add_parseable(parseables, &end, MAX_EXPRESSION_LENGTH, pop_stack(operator_stack_p));
+		if (error_code != 0)
+			goto cleanup_on_error;
 	}
 
 	//Add a close, so the resolver knows where to end
