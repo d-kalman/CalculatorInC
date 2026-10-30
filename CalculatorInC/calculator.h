@@ -2,6 +2,7 @@
 #define MAX_NUMBER_LENGTH 20
 #define MAX_EXPRESSION_LENGTH 120
 #include "parseable.h"
+#include "stack.h"
 
 typedef struct AnswerState_t {
 	double previous_answer;
@@ -18,6 +19,21 @@ typedef struct Parse_result_t {
 	int parseables_size;
 	enum error_code error_code;
 } ParseResult;
+
+typedef struct Parser_state_t {
+	Parseable* parseables;
+	size_t capacity;
+	int end;
+	Stack* operator_stack_p;
+	int operator_expected;
+} ParserState;
+
+typedef struct Input_t{
+	char* line;
+	int index;
+	size_t size;
+	size_t capacity;
+} Input;
 
 int allowed_input_operation(char c);
 int allowed_followup_operation(char c);
