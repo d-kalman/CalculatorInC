@@ -8,6 +8,33 @@
 #include "stack.h"
 #include "calculator.h"
 
+static int allowed_input_operation(char c)
+{
+	int allowed = 0;
+	allowed = allowed_followup_operation(c);
+	switch (c) {
+	case '(':
+	case ')':
+	case '^':
+		allowed++;
+		break;
+	default:
+		break;
+	}
+	return allowed;
+}
+static int allowed_followup_operation(char c) {
+	switch (c) {
+	case 'x':
+	case '+':
+	case '/':
+	case '-':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 char operator_associativity(char op) {
 	char associativity = 'L';
 	if (op == '^')
@@ -238,32 +265,7 @@ static double resolve_operation(double lo, double ro, char operation)
 		return 0.0;
 	}
 }
-static int allowed_input_operation(char c)
-{
-	int allowed = 0;
-	allowed = allowed_followup_operation(c);
-	switch (c) {
-	case '(':
-	case ')':
-	case '^':
-		allowed++;
-		break;
-	default:
-		break;
-	}
-	return allowed;
-}
-static int allowed_followup_operation(char c) {
-	switch (c) {
-	case 'x':
-	case '+':
-	case '/':
-	case '-':
-		return 1;
-	default:
-		return 0;
-	}
-}
+
 static int validate_logic(double lo, double ro, char operation) {
 	//Division by 0
 	if (ro == 0 && operation == '/')
