@@ -163,10 +163,18 @@ void run_resolve_test_suite()
 		{ "(2 ^ 3) ^ 2",          64,     NO_ERROR, 0, 0  },
 		{ "2 ^ 3 x 2",            16,     NO_ERROR, 0, 0  },
 		{ "(-1) ^ 3",            -1,     NO_ERROR, 0, 0  },
+		{ "2^-3^2", 0.001953125,     NO_ERROR, 0, 0 },
 		//Logical errors
 		{ "(-8) ^ (1 / 3)",       0,     LOGICAL_ERROR, 0, 0  }, // restricted domain
 		{ "1/0",			      0,     LOGICAL_ERROR, 0, 0}, // division by zero
-		{ "(-1)^0.5",			  0,     LOGICAL_ERROR, 0, 0 } //sqrt of -1
+		{ "(-1)^0.5",			  0,     LOGICAL_ERROR, 0, 0 }, //sqrt of -1
+		//Error paths
+		{ "(2 +3", 0,     PARSING_ERROR, 0, 0 },
+		{ "2+3)", 0,     PARSING_ERROR, 0, 0 },
+		{ "2 3", 0,     PARSING_ERROR, 0, 0 },
+		{ "2+",	0,		PARSING_ERROR, 0, 0 },
+		{ "()", 0, PARSING_ERROR, 0, 0},
+
 	};
 	int tests_passed = 0;
 	int tests_run = (int)(sizeof(cases) / sizeof(cases[0]));
@@ -197,15 +205,23 @@ int run_resolve_test(const char* expression, double expected_result,
 	AnswerState ans_state = { .has_previous_answer = has_previous_answer, .previous_answer = previous_answer };
 	int error_code = parse(expression, (int)strlen(expression), &parseables, &size, ans_state);
 	if (error_code != NO_ERROR) {
-		printf("Test %d failed: Parsing of %s with %d\n", id, expression, error_code);
-		free(parseables);
-		return 0;
+		if (error_code == expected_error_code) {
+			if (parseables != NULL)
+				free(parseables);
+			return 1;
+		}
+		else {
+			printf("Test %d failed: Parsing of %s with %d\n", id, expression, error_code);
+			if(parseables != NULL)
+				free(parseables);
+			return 0;
+		}
 	}
 	double answer = 0.0;
 	error_code = resolve(parseables, &answer);
 	if (error_code == NO_ERROR) {
 		if (!float_compare(answer, expected_result)) {
-			printf("Test %d failed: %.10g not matching %.10g\n", id, answer, expected_result);
+			printf("Test %d failed: %s %.10g not matching %.10g\n", id, expression, answer, expected_result);
 		}
 		else {
 			test_result = 1;

@@ -29,7 +29,7 @@ typedef struct Parser_state_t {
 } ParserState;
 
 typedef struct Input_t{
-	char* line;
+	const char* line;
 	int index;
 	size_t size;
 	size_t capacity;

@@ -56,7 +56,9 @@ int add_parseable(ParserState* state, Parseable p) {
 	if (state->end >= state->capacity - 1) {
 		error_code = MEMORY_ERROR;
 	}
-	state->parseables[state->end++] = p;
+	else{
+		state->parseables[state->end++] = p;
+	}
 	return error_code;
 }
 
@@ -66,9 +68,26 @@ int drain_operator_stack(ParserState* state) {
 		//Unmatched bracket, error
 		if (inspect(state->operator_stack_p).operation == '(') {
 			error_code = PARSING_ERROR;
+			break;
 		}
 		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
 	}
+	return error_code;
+}
+int parse_arithmetic_operator(ParserState* state, Parseable p) {
+	int error_code = NO_ERROR;
+	while (!is_empty(state->operator_stack_p) &&
+		operator_precedes(inspect(state->operator_stack_p).operation,
+			p.operation,
+			operator_associativity(p.operation)))
+	{
+		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+		if (error_code)
+			return error_code;
+	}
+	if (push_to_stack(state->operator_stack_p, p))
+		error_code = MEMORY_ERROR;
+	state->operator_expected = 0;
 	return error_code;
 }
 
@@ -96,25 +115,12 @@ int parse_unary(ParserState* state, Parseable p) {
 	return error_code;
 }
 
-int parse_arithmetic_operator(ParserState* state, Parseable p) {
-	int error_code = NO_ERROR;
-	while (!is_empty(state->operator_stack_p) &&
-		operator_precedes(inspect(state->operator_stack_p).operation,
-			p.operation,
-			operator_associativity(p.operation)))
-	{
-		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
-	}
-	if (push_to_stack(state->operator_stack_p, p))
-		error_code = MEMORY_ERROR;
-	state->operator_expected = 0;
-	return error_code;
-}
-
 int parse_close_paren(ParserState* state) {
 	int error_code = NO_ERROR;
 	while (!is_empty(state->operator_stack_p) && inspect(state->operator_stack_p).operation != '(') {
 		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+		if (error_code)
+			return error_code;
 	}
 	//If no matching bracket found
 	//If this is true, that means that the loop was short circuited, and we couldn't find matching opener
@@ -126,9 +132,9 @@ int parse_close_paren(ParserState* state) {
 		pop_stack(state->operator_stack_p);
 
 	state->operator_expected = 1;
-	return NO_ERROR;
+	return error_code;
 };
-int parse_operator(Input* input, ParserState* state, Parseable p) {
+int parse_operator(ParserState* state, Parseable p) {
 	int error_code = NO_ERROR;
 	if (!allowed_input_operation(p.operation)) {
 		error_code = INPUT_ERROR;
@@ -171,15 +177,17 @@ int parse_number(Input* input, ParserState* state) {
 	int error_code = NO_ERROR;
 	if (state->operator_expected == 1) {
 		error_code = PARSING_ERROR;
+		return error_code;
 	}
 	while (input->index < input->size &&
 		(input->line[input->index] == '.' || (input->line[input->index] >= '0' && input->line[input->index] <= '9')))
 		{
-		number[number_index] = input->line[input->index];
-		number_index++;
 		if (number_index >= MAX_NUMBER_LENGTH) {
 			error_code = INPUT_ERROR;
+			return error_code;
 		}
+		number[number_index] = input->line[input->index];
+		number_index++;
 		input->index++;
 	}
 	input->index--;
@@ -233,7 +241,7 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 		parser_state.operator_expected = 1;
 	}
 
-	for (input.index = begin; input.index < input.size && parser_state.end < MAX_EXPRESSION_LENGTH - 1; ++input.index) {
+	for (input.index = begin; input.index < input.size; ++input.index) {
 		//skip whitespace
 		char current_char = input.line[input.index];
 		if (current_char == ' ')
@@ -245,7 +253,7 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 				goto cleanup_on_error;
 		} else {
 			Parseable current_operator = { .number = 0.0, .operation = current_char };
-			error_code = parse_operator(&input, parser_state_p, current_operator);
+			error_code = parse_operator(parser_state_p, current_operator);
 			if (error_code != 0)
 				goto cleanup_on_error;
 		}
@@ -280,7 +288,7 @@ int process_line(const char* string, int size, double* answer, int* has_previous
 {
 	Parseable* parseable_list = NULL;
 	int list_size = 0;
-	AnswerState ans_state = { .previous_answer = *has_previous_answer, .previous_answer = *answer };
+	AnswerState ans_state = { .has_previous_answer = *has_previous_answer, .previous_answer = *answer };
 	int error_code = parse(string, size, &parseable_list, &list_size, ans_state);
 
 	if (error_code == NO_ERROR) {
