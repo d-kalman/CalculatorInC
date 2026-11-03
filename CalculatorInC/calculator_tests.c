@@ -174,7 +174,9 @@ void run_resolve_test_suite()
 		{ "2 3", 0,     PARSING_ERROR, 0, 0 },
 		{ "2+",	0,		PARSING_ERROR, 0, 0 },
 		{ "()", 0, PARSING_ERROR, 0, 0},
-
+		{ "99999999999999999999 + 1", 1e20, NO_ERROR, 0, 0},
+		{ "999999999999999999999 + 1", 0, INPUT_ERROR, 0, 0}, //number too long issue
+		{ "1.2.3", 0, INPUT_ERROR, 0, 0}
 	};
 	int tests_passed = 0;
 	int tests_run = (int)(sizeof(cases) / sizeof(cases[0]));

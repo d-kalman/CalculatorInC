@@ -70,7 +70,11 @@ int drain_operator_stack(ParserState* state) {
 			error_code = PARSING_ERROR;
 			break;
 		}
-		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+		else {
+			error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+			if (error_code)
+				break;
+		}
 	}
 	return error_code;
 }
@@ -117,6 +121,8 @@ int parse_unary(ParserState* state, Parseable p) {
 
 int parse_close_paren(ParserState* state) {
 	int error_code = NO_ERROR;
+	if (state->operator_expected == 0)
+		return PARSING_ERROR;
 	while (!is_empty(state->operator_stack_p) && inspect(state->operator_stack_p).operation != '(') {
 		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
 		if (error_code)
@@ -133,7 +139,7 @@ int parse_close_paren(ParserState* state) {
 
 	state->operator_expected = 1;
 	return error_code;
-};
+}
 int parse_operator(ParserState* state, Parseable p) {
 	int error_code = NO_ERROR;
 	if (!allowed_input_operation(p.operation)) {
@@ -173,18 +179,25 @@ int parse_operator(ParserState* state, Parseable p) {
 
 int parse_number(Input* input, ParserState* state) {
 	int number_index = 0;
-	char number[MAX_NUMBER_LENGTH] = { '#' };
+	char number[MAX_NUMBER_LENGTH+1] = { '#' };
 	int error_code = NO_ERROR;
 	if (state->operator_expected == 1) {
 		error_code = PARSING_ERROR;
 		return error_code;
 	}
+	int point_found = 0;
 	while (input->index < input->size &&
 		(input->line[input->index] == '.' || (input->line[input->index] >= '0' && input->line[input->index] <= '9')))
 		{
 		if (number_index >= MAX_NUMBER_LENGTH) {
 			error_code = INPUT_ERROR;
 			return error_code;
+		}
+		if (input->line[input->index] == '.') {
+			if (point_found == 1)
+				return INPUT_ERROR;
+			else
+				point_found = 1;
 		}
 		number[number_index] = input->line[input->index];
 		number_index++;
@@ -194,7 +207,8 @@ int parse_number(Input* input, ParserState* state) {
 	if (number_index > 0)
 	{
 		number[number_index] = '\0';
-		double num = atof(number);
+		char* endptr = NULL;
+		double num = strtod(number, &endptr);
 		number_index = 0;
 		//Add number to the output
 		Parseable p = { .number = num, .operation = '#' };
@@ -206,9 +220,11 @@ int parse_number(Input* input, ParserState* state) {
 
 int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* out_parsed_size, AnswerState answer_state) {
 
-	Parseable* parseables = (Parseable*)malloc(MAX_EXPRESSION_LENGTH * sizeof(Parseable));
+	Input input = { .line = l_string, .size = l_size, .capacity = l_size + 2, .index = 0};
+	Parseable* parseables = (Parseable*)malloc(input.capacity * sizeof(Parseable));
 	if (parseables == NULL) {
 		*out_parseable = NULL;
+		*out_parsed_size = 0;
 		return MEMORY_ERROR;
 	}
 
@@ -216,10 +232,9 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 	Stack* operator_stack_p = &operator_stack;
 	initialize_stack(operator_stack_p);
 
-	Input input = { .line = l_string, .size = l_size, .capacity = MAX_EXPRESSION_LENGTH, .index = 0};
 
 	ParserState parser_state = { .parseables = parseables,
-								.end = 0, .capacity = MAX_EXPRESSION_LENGTH,
+								.end = 0, .capacity = input.capacity,
 								.operator_stack_p = operator_stack_p,
 								.operator_expected = 0};
 	ParserState* parser_state_p = &parser_state;
@@ -229,7 +244,7 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 	//int operator_expected = 0;
 	//Discard leading whitespace
 	int begin = 0;
-	while (input.line[begin] == ' ' && begin < input.size) {
+	while (begin < input.size && input.line[begin] == ' ') {
 		begin++;
 	}
 	//If the line reuses the previous answer, insert it as the first parseable
@@ -272,7 +287,8 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 		goto cleanup_on_error;
 
 	//Add a close, so the resolver knows where to end
-	parser_state.parseables[parser_state.end].operation = '!';
+	Parseable p = { .number = 0.0, .operation = '!' };
+	parser_state.parseables[parser_state.end] = p;
 	*out_parseable = parser_state.parseables;
 	*out_parsed_size = parser_state.end + 1;
 	return NO_ERROR;
