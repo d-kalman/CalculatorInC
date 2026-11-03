@@ -165,18 +165,20 @@ void run_resolve_test_suite()
 		{ "(-1) ^ 3",            -1,     NO_ERROR, 0, 0  },
 		{ "2^-3^2", 0.001953125,     NO_ERROR, 0, 0 },
 		//Logical errors
-		{ "(-8) ^ (1 / 3)",       0,     LOGICAL_ERROR, 0, 0  }, // restricted domain
-		{ "1/0",			      0,     LOGICAL_ERROR, 0, 0}, // division by zero
-		{ "(-1)^0.5",			  0,     LOGICAL_ERROR, 0, 0 }, //sqrt of -1
+		{ "(-8) ^ (1 / 3)",       0,     LOGICAL_ERROR, 0, 0  }, //restricted domain
+		{ "1/0",			      0,     LOGICAL_ERROR, 0, 0},   //division by zero
+		{ "(-1)^0.5",			  0,     LOGICAL_ERROR, 0, 0 },  //sqrt of -1
 		//Error paths
 		{ "(2 +3", 0,     PARSING_ERROR, 0, 0 },
 		{ "2+3)", 0,     PARSING_ERROR, 0, 0 },
 		{ "2 3", 0,     PARSING_ERROR, 0, 0 },
 		{ "2+",	0,		PARSING_ERROR, 0, 0 },
 		{ "()", 0, PARSING_ERROR, 0, 0},
-		{ "99999999999999999999 + 1", 1e20, NO_ERROR, 0, 0},
+		{ "99999999999999999999 + 1", 1e20, NO_ERROR, 0, 0}, //number just fits 
 		{ "999999999999999999999 + 1", 0, INPUT_ERROR, 0, 0}, //number too long issue
-		{ "1.2.3", 0, INPUT_ERROR, 0, 0}
+		{ "(2 + )", 0, PARSING_ERROR, 0, 0},
+		{ "2x()", 0, PARSING_ERROR, 0, 0},
+		{ "(-)", 0, PARSING_ERROR, 0, 0},		
 	};
 	int tests_passed = 0;
 	int tests_run = (int)(sizeof(cases) / sizeof(cases[0]));

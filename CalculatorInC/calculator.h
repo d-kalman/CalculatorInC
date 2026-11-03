@@ -35,9 +35,6 @@ typedef struct Input_t{
 	size_t capacity;
 } Input;
 
-int allowed_input_operation(char c);
-int allowed_followup_operation(char c);
-
 int operator_precedence(char op);
 int operator_precedes(char op1, char op2, char associativity);
 char operator_associativity(char op);
@@ -45,5 +42,3 @@ char operator_associativity(char op);
 int parse(const char* string, size_t size, Parseable ** out_parseable, int* out_parsed_size, AnswerState ans_state);
 int process_line(const char* string, int size, double* answer, int* has_previous_answer);
 int resolve(Parseable* parseables, double* out_answer);
-
-int validate_logic(double lo, double ro, char operation);

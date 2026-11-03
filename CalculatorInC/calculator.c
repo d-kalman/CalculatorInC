@@ -8,6 +8,13 @@
 #include "stack.h"
 #include "calculator.h"
 
+char operator_associativity(char op) {
+	char associativity = 'L';
+	if (op == '^')
+		associativity = 'R';
+	return associativity;
+}
+
 int operator_precedence(char op) {
 	switch (op) {
 	case '^':
@@ -44,14 +51,8 @@ int operator_precedes(char op1, char op2, char associativity) {
 	return preceeds;
 }
 
-char operator_associativity(char op) {
-	char associativity = 'L';
-	if (op == '^')
-		associativity = 'R';
-	return associativity;
-}
 
-int add_parseable(ParserState* state, Parseable p) {
+static int add_parseable(ParserState* state, Parseable p) {
 	int error_code = 0;
 	if (state->end >= state->capacity - 1) {
 		error_code = MEMORY_ERROR;
@@ -62,7 +63,7 @@ int add_parseable(ParserState* state, Parseable p) {
 	return error_code;
 }
 
-int drain_operator_stack(ParserState* state) {
+static int drain_operator_stack(ParserState* state) {
 	int error_code = NO_ERROR;
 	while (!is_empty(state->operator_stack_p)) {
 		//Unmatched bracket, error
@@ -78,7 +79,7 @@ int drain_operator_stack(ParserState* state) {
 	}
 	return error_code;
 }
-int parse_arithmetic_operator(ParserState* state, Parseable p) {
+static int parse_arithmetic_operator(ParserState* state, Parseable p) {
 	int error_code = NO_ERROR;
 	while (!is_empty(state->operator_stack_p) &&
 		operator_precedes(inspect(state->operator_stack_p).operation,
@@ -95,7 +96,7 @@ int parse_arithmetic_operator(ParserState* state, Parseable p) {
 	return error_code;
 }
 
-int parse_unary(ParserState* state, Parseable p) {
+static int parse_unary(ParserState* state, Parseable p) {
 	int error_code = NO_ERROR;
 	if (p.operation == '-') {
 		if (state->operator_expected) {
@@ -119,7 +120,7 @@ int parse_unary(ParserState* state, Parseable p) {
 	return error_code;
 }
 
-int parse_close_paren(ParserState* state) {
+static int parse_close_paren(ParserState* state) {
 	int error_code = NO_ERROR;
 	if (state->operator_expected == 0)
 		return PARSING_ERROR;
@@ -140,7 +141,7 @@ int parse_close_paren(ParserState* state) {
 	state->operator_expected = 1;
 	return error_code;
 }
-int parse_operator(ParserState* state, Parseable p) {
+static int parse_operator(ParserState* state, Parseable p) {
 	int error_code = NO_ERROR;
 	if (!allowed_input_operation(p.operation)) {
 		error_code = INPUT_ERROR;
@@ -177,7 +178,7 @@ int parse_operator(ParserState* state, Parseable p) {
 	return error_code;
 }
 
-int parse_number(Input* input, ParserState* state) {
+static int parse_number(Input* input, ParserState* state) {
 	int number_index = 0;
 	char number[MAX_NUMBER_LENGTH+1] = { '#' };
 	int error_code = NO_ERROR;
@@ -218,6 +219,69 @@ int parse_number(Input* input, ParserState* state) {
 	return error_code;
 }
 
+static double resolve_operation(double lo, double ro, char operation)
+{
+	switch (operation) {
+	case '^':
+		return pow(lo, ro);
+	case '~':
+		return -1 * ro;
+	case '+':
+		return lo + ro;
+	case '-':
+		return lo - ro;
+	case 'x':
+		return lo * ro;
+	case '/':
+		return lo / ro;
+	default:
+		return 0.0;
+	}
+}
+static int allowed_input_operation(char c)
+{
+	int allowed = 0;
+	allowed = allowed_followup_operation(c);
+	switch (c) {
+	case '(':
+	case ')':
+	case '^':
+		allowed++;
+		break;
+	default:
+		break;
+	}
+	return allowed;
+}
+static int allowed_followup_operation(char c) {
+	switch (c) {
+	case 'x':
+	case '+':
+	case '/':
+	case '-':
+		return 1;
+	default:
+		return 0;
+	}
+}
+static int validate_logic(double lo, double ro, char operation) {
+	//Division by 0
+	if (ro == 0 && operation == '/')
+		return 0;
+	//Non integer root of a negative number is not allowed
+	else if (operation == '^' && lo < 0.0) {
+		// Check if exponent is integer
+		double intpart;
+		if (modf(fabs(ro), &intpart) != 0.0)
+			return 0;
+		else
+			return 1;
+	}
+	else {
+		return 1;
+	}
+}
+
 int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* out_parsed_size, AnswerState answer_state) {
 
 	Input input = { .line = l_string, .size = l_size, .capacity = l_size + 2, .index = 0};
@@ -247,6 +311,11 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 	while (begin < input.size && input.line[begin] == ' ') {
 		begin++;
 	}
+	if (begin >= input.size) {
+		error_code = PARSING_ERROR;
+		goto cleanup_on_error;
+	}
+		
 	//If the line reuses the previous answer, insert it as the first parseable
 	if (allowed_followup_operation(input.line[begin]) && answer_state.has_previous_answer) {
 		Parseable p = { .number = answer_state.previous_answer, .operation = '#' };
@@ -312,36 +381,13 @@ int process_line(const char* string, int size, double* answer, int* has_previous
 		if (error_code == NO_ERROR) {
 			*has_previous_answer = 1;
 		}
-		free(parseable_list);
 	}
-	else if (error_code && parseable_list != NULL) {
-		free(parseable_list);
-	}
+	free(parseable_list);
+	parseable_list = NULL;
 	return error_code;
 }
 
-double resolve_operation(double lo, double ro, char operation)
-{
-	switch (operation) {
-	case '^':
-		return pow(lo, ro);
-	case '~':
-		return -1 * ro;
-	case '+':
-		return lo + ro;
-	case '-':
-		return lo - ro;
-	case 'x':
-		return lo * ro;
-	case '/':
-		return lo / ro;
-	default:
-		return 0.0;
-	}
-}
-
 int resolve(Parseable* parseables, double* out_answer) {
-	double answer = 0;
 	int index = 0;
 	int error_code = NO_ERROR;
 	Stack stack;
@@ -380,48 +426,4 @@ int resolve(Parseable* parseables, double* out_answer) {
 		error_code = PARSING_ERROR;
 	}
 	return error_code;
-}
-
-int allowed_input_operation(char c)
-{
-	int allowed = 0;
-	allowed = allowed_followup_operation(c);
-	switch (c) {
-	case '(':
-	case ')':
-	case '^':
-		allowed++;
-		break;
-	default:
-		break;
-	}
-	return allowed;
-}
-int allowed_followup_operation(char c) {
-	switch (c) {
-	case 'x':
-	case '+':
-	case '/':
-	case '-':
-		return 1;
-	default:
-		return 0;
-	}
-}
-int validate_logic(double lo, double ro, char operation) {
-	//Division by 0
-	if (ro == 0 && operation == '/')
-		return 0;
-	//Non integer root of a negative number is not allowed
-	else if (operation == '^' && lo < 0.0) {
-		// Check if exponent is integer
-		double intpart;
-		if (modf(fabs(ro), &intpart) != 0.0)
-			return 0;
-		else
-			return 1;
-	}
-	else {
-		return 1;
-	}
 }
