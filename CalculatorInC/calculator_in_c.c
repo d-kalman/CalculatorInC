@@ -39,13 +39,16 @@ int main(int argc, char** argv)
 				printf("Answer: %.10g\n", answer);
 			}
 			else if (error_code == MEMORY_ERROR) {
-				printf("Memory allocation error\n");
+				printf("Memory allocation or overflow error\n");
 			}
 			else if (error_code == PARSING_ERROR) {
 				printf("Parsing error\n");
 			}
 			else if (error_code == INPUT_ERROR) {
 				printf("Input error\n");
+			}
+			else if (error_code == LOGICAL_ERROR) {
+				printf("Logical error\n");
 			}
 			else {
 				printf("Unknown error\n");

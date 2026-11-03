@@ -5,7 +5,7 @@
 //data
 
 #include "parseable.h"
-#define MAX_STACK_SIZE 100
+#define MAX_STACK_SIZE 120
 
 typedef struct Stack_t {
 	Parseable parseable_stack[MAX_STACK_SIZE];
