@@ -1,5 +1,4 @@
 #pragma once
-#include <math.h>
 
 int float_compare(double left, double right);
 

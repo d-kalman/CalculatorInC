@@ -1,3 +1,4 @@
+#include <math.h>
 #include "calculator_util.h"
 
 int float_compare(double left, double right) {

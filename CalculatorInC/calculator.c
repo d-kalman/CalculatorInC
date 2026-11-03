@@ -27,8 +27,7 @@ int operator_precedence(char op) {
 
 int operator_precedes(char op1, char op2, char associativity) {
 	int preceeds = 0;
-	if (associativity == 'R')
-	{
+	if (associativity == 'R') {
 		if (operator_precedence(op1) > operator_precedence(op2))
 			preceeds = 1;
 		else
@@ -55,9 +54,114 @@ char operator_associativity(char op) {
 int add_parseable(ParserState* state, Parseable p) {
 	int error_code = 0;
 	if (state->end >= state->capacity - 1) {
-		error_code = PARSING_ERROR;
+		error_code = MEMORY_ERROR;
 	}
 	state->parseables[state->end++] = p;
+	return error_code;
+}
+
+int drain_operator_stack(ParserState* state) {
+	int error_code = NO_ERROR;
+	while (!is_empty(state->operator_stack_p)) {
+		//Unmatched bracket, error
+		if (inspect(state->operator_stack_p).operation == '(') {
+			error_code = PARSING_ERROR;
+		}
+		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+	}
+	return error_code;
+}
+
+int parse_unary(ParserState* state, Parseable p) {
+	int error_code = NO_ERROR;
+	if (p.operation == '-') {
+		if (state->operator_expected) {
+			error_code = parse_arithmetic_operator(state, p);
+		}
+		//Unary operator
+		else {
+			p.operation = '~';
+			if (push_to_stack(state->operator_stack_p, p))
+				error_code = MEMORY_ERROR;
+		}
+	}
+				
+	else if (p.operation == '+') {
+		//Unary + operator: skip
+		//TODO: Decide if we want to do something with this.
+		if(state->operator_expected)
+			error_code = parse_arithmetic_operator(state, p);
+	}
+	state->operator_expected = 0;
+	return error_code;
+}
+
+int parse_arithmetic_operator(ParserState* state, Parseable p) {
+	int error_code = NO_ERROR;
+	while (!is_empty(state->operator_stack_p) &&
+		operator_precedes(inspect(state->operator_stack_p).operation,
+			p.operation,
+			operator_associativity(p.operation)))
+	{
+		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+	}
+	if (push_to_stack(state->operator_stack_p, p))
+		error_code = MEMORY_ERROR;
+	state->operator_expected = 0;
+	return error_code;
+}
+
+int parse_close_paren(ParserState* state) {
+	int error_code = NO_ERROR;
+	while (!is_empty(state->operator_stack_p) && inspect(state->operator_stack_p).operation != '(') {
+		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+	}
+	//If no matching bracket found
+	//If this is true, that means that the loop was short circuited, and we couldn't find matching opener
+	if (is_empty(state->operator_stack_p)) {
+		error_code = PARSING_ERROR;
+	}
+	//if found: remove the opening bracket
+	else
+		pop_stack(state->operator_stack_p);
+
+	state->operator_expected = 1;
+	return NO_ERROR;
+};
+int parse_operator(Input* input, ParserState* state, Parseable p) {
+	int error_code = NO_ERROR;
+	if (!allowed_input_operation(p.operation)) {
+		error_code = INPUT_ERROR;
+	}
+	else {
+		switch (p.operation) {
+		case '-':
+		case '+':
+			error_code = parse_unary(state, p);
+			break;
+		case '(':
+			if (state->operator_expected == 0) {
+				if (push_to_stack(state->operator_stack_p, p)) {
+					error_code = MEMORY_ERROR;
+				} else {
+					state->operator_expected = 0;
+				}
+			}
+			else {
+				error_code = PARSING_ERROR;
+			}
+			break;
+		case 'x':
+		case '/':
+		case '^':
+			error_code = parse_arithmetic_operator(state, p);
+			break;
+		case ')':
+			error_code = parse_close_paren(state);
+			break;
+
+		}
+	}
 	return error_code;
 }
 
@@ -92,7 +196,7 @@ int parse_number(Input* input, ParserState* state) {
 	return error_code;
 }
 
-int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* out_parsed_size, double previous_answer, int has_previous_answer) {
+int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* out_parsed_size, AnswerState answer_state) {
 
 	Parseable* parseables = (Parseable*)malloc(MAX_EXPRESSION_LENGTH * sizeof(Parseable));
 	if (parseables == NULL) {
@@ -106,14 +210,12 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 
 	Input input = { .line = l_string, .size = l_size, .capacity = MAX_EXPRESSION_LENGTH, .index = 0};
 
-	ParserState parser_state = { .parseables = parseables, 
-								.end = 0, .capacity = MAX_EXPRESSION_LENGTH, 
-								.operator_stack_p = operator_stack_p, 
+	ParserState parser_state = { .parseables = parseables,
+								.end = 0, .capacity = MAX_EXPRESSION_LENGTH,
+								.operator_stack_p = operator_stack_p,
 								.operator_expected = 0};
 	ParserState* parser_state_p = &parser_state;
 	*out_parsed_size = 0;
-	
-	//int end = 0;
 	int error_code = NO_ERROR;
 	//An operator needs both a left and a right operand.
 	//int operator_expected = 0;
@@ -123,8 +225,8 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 		begin++;
 	}
 	//If the line reuses the previous answer, insert it as the first parseable
-	if (allowed_followup_operation(input.line[begin]) && has_previous_answer) {
-		Parseable p = { .number = previous_answer, .operation = '#' };
+	if (allowed_followup_operation(input.line[begin]) && answer_state.has_previous_answer) {
+		Parseable p = { .number = answer_state.previous_answer, .operation = '#' };
 		error_code = add_parseable(parser_state_p, p);
 		if (error_code != 0)
 			goto cleanup_on_error;
@@ -137,116 +239,29 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 		if (current_char == ' ')
 			continue;
 
-		//New approach: after operator either number or opening bracket expected
-		//after number or closing bracket operator is expected
-		//Read numbers in one swoop
 		if ((current_char >= '0' && current_char <= '9')) {
-			if (parser_state.operator_expected == 1) {
-				error_code = PARSING_ERROR;
+			error_code = parse_number(&input, parser_state_p);
+			if (error_code != 0)
 				goto cleanup_on_error;
-			}
-			else {
-				error_code = parse_number(&input, parser_state_p);
-				if (error_code != 0)
-					goto cleanup_on_error;
-			}
-		}
-		//Bracket or operator:
-		//decide on the operator
-		//Logic on operator:
-		//Take the next operator
-		//If the stack top precedence is higher push top to output
-		//If same due to left right precedence push top to output
-		else {
+		} else {
 			Parseable current_operator = { .number = 0.0, .operation = current_char };
-			//If we find an operator when operand expected
-			//It can be either a unary operator or a '('
-			if (parser_state.operator_expected == 0) {
-				//Push opening on operator stack
-				if (current_char == '(') {
-					push_to_stack(operator_stack_p, current_operator);
-					parser_state.operator_expected = 0;
-				}
-				//Decide if chained subtract or unary operator
-				else if (current_char == '-') {
-					//Chained subtract
-					if (has_previous_answer) {
-						push_to_stack(operator_stack_p, current_operator);
-						parser_state.operator_expected = 0;
-					}
-					//Unary operator
-					else {
-						current_operator.operation = '~';
-						push_to_stack(operator_stack_p, current_operator);
-						parser_state.operator_expected = 0;
-					}
-				}
-				//Unary + operator: skip
-				else if (current_char == '+') {
-					continue;
-				}
-				else {
-					error_code = PARSING_ERROR;
-					goto cleanup_on_error;
-				}
-			}
-			//If closing bracket: pop operators until opening found
-			else if (current_operator.operation == ')')
-			{
-				while (!is_empty(operator_stack_p) && inspect(operator_stack_p).operation != '(') {
-					error_code = add_parseable(parser_state_p, pop_stack(parser_state.operator_stack_p));
-				}
-				//If no matching bracket found
-				//If this is true, that means that the loop was short circuited, and we couldn't find matching opener
-				if (is_empty(operator_stack_p)) {
-					error_code = PARSING_ERROR;
-					goto cleanup_on_error;
-				}
-				//if found: remove the opening bracket
-				else
-					pop_stack(operator_stack_p);
-
-				parser_state.operator_expected = 1;
-			}
-			//Any other operator
-			else if (allowed_input_operation(current_operator.operation)) {
-				while (!is_empty(operator_stack_p) &&
-					operator_precedes(inspect(operator_stack_p).operation,
-						current_operator.operation,
-						operator_associativity(current_operator.operation)))
-				{
-					error_code = add_parseable(parser_state_p, pop_stack(operator_stack_p));
-					if (error_code != 0)
-						goto cleanup_on_error;
-				}
-				push_to_stack(operator_stack_p, current_operator);
-				parser_state.operator_expected = 0;
-			}
-			//Operation not allowed
-			else {
-				error_code = INPUT_ERROR;
+			error_code = parse_operator(&input, parser_state_p, current_operator);
+			if (error_code != 0)
 				goto cleanup_on_error;
-			}
 		}
 	}
+
+
 	//State left by trailing operator
 	if (parser_state.operator_expected == 0) {
 		error_code = PARSING_ERROR;
 		goto cleanup_on_error;
-
 	}
 
 	//Empty out the operator stack too
-	while (!is_empty(operator_stack_p)) {
-		//Unmatched bracket, error
-		if (inspect(operator_stack_p).operation == '(') {
-			error_code = PARSING_ERROR;
-			goto cleanup_on_error;
-		}
-		error_code = add_parseable(parser_state_p, pop_stack(operator_stack_p));
-		if (error_code != 0)
-			goto cleanup_on_error;
-	}
+	error_code = drain_operator_stack(parser_state_p);
+	if (error_code != 0)
+		goto cleanup_on_error;
 
 	//Add a close, so the resolver knows where to end
 	parser_state.parseables[parser_state.end].operation = '!';
@@ -265,8 +280,8 @@ int process_line(const char* string, int size, double* answer, int* has_previous
 {
 	Parseable* parseable_list = NULL;
 	int list_size = 0;
-
-	int error_code = parse(string, size, &parseable_list, &list_size, *answer, *has_previous_answer);
+	AnswerState ans_state = { .previous_answer = *has_previous_answer, .previous_answer = *answer };
+	int error_code = parse(string, size, &parseable_list, &list_size, ans_state);
 
 	if (error_code == NO_ERROR) {
 		error_code = resolve(parseable_list, answer);
@@ -304,13 +319,17 @@ double resolve_operation(double lo, double ro, char operation)
 int resolve(Parseable* parseables, double* out_answer) {
 	double answer = 0;
 	int index = 0;
+	int error_code = NO_ERROR;
 	Stack stack;
 	Stack* stack_p = &stack;
 	initialize_stack(stack_p);
 	while (parseables[index].operation != '!') {
 		Parseable p = parseables[index];
 		if (parseables[index].operation == '#') {
-			push_to_stack(stack_p, p);
+			if (push_to_stack(stack_p, p)) {
+				error_code = MEMORY_ERROR;
+				break;
+			}
 		}
 		else {
 			double ro = 0;
@@ -320,21 +339,23 @@ int resolve(Parseable* parseables, double* out_answer) {
 				lo = pop_stack(stack_p).number;
 			}
 			if (!validate_logic(lo, ro, p.operation)) {
-				return LOGICAL_ERROR;
+				error_code = LOGICAL_ERROR;
+				break;
 			}
 			Parseable result = { .number = resolve_operation(lo, ro, p.operation), .operation = '#' };
 			push_to_stack(stack_p, result);
 		}
 		index++;
 	}
+	if (error_code != NO_ERROR)
+		return error_code;
 	if (!is_empty(stack_p)) {
 		*out_answer = inspect(stack_p).number;
-		return NO_ERROR;
 	}
-	else
-	{
-		return PARSING_ERROR;
+	else {
+		error_code = PARSING_ERROR;
 	}
+	return error_code;
 }
 
 int allowed_input_operation(char c)
