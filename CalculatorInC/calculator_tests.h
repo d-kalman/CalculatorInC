@@ -4,7 +4,7 @@
 void run_calculator_test_suite();
 void run_parsing_test_suite();
 int run_parsing_test(const char* expression, 
-					Parseable expected_result[], 
+					Token expected_result[], 
 					int expected_result_length, 
 					int expected_error_code, 
 					double previous_answer, 

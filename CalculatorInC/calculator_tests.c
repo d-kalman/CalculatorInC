@@ -37,7 +37,7 @@ void run_parsing_test_suite()
 	int tests_passed = 0;
 	int tests_run = 0;
 	int expected_result_length = 0;
-	Parseable expected_result[] = {
+	Token expected_result[] = {
 		{.number = 1.0, .operation = '#'},
 		{.number = 2.0, .operation = '#' },
 		{.number = 3.0, .operation = '#' },
@@ -47,11 +47,11 @@ void run_parsing_test_suite()
 		{.number = 0.0, .operation = '-'},
 		{.number = 0.0, .operation = '!' }
 	};
-	expected_result_length = sizeof(expected_result) / sizeof(Parseable);
+	expected_result_length = sizeof(expected_result) / sizeof(Token);
 	tests_passed += run_parsing_test("1.0 + 2.00 * 3 - 4.0", expected_result, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 1 2 3 x + 4 -
 	tests_run++;
 
-	Parseable expected_result2[] = {
+	Token expected_result2[] = {
 		{.number = 1.0, .operation = '#'},
 		{.number = 2.0, .operation = '#'},
 		{.number = 0.0, .operation = '+'},
@@ -61,22 +61,22 @@ void run_parsing_test_suite()
 		{.number = 0.0, .operation = '-'},
 		{.number = 0.0, .operation = '!'}
 	};
-	expected_result_length = sizeof(expected_result2) / sizeof(Parseable);
+	expected_result_length = sizeof(expected_result2) / sizeof(Token);
 	tests_passed += run_parsing_test("(1.0 + 2.00) * 3 - 4.0", expected_result2, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 1 2 + 3 x 4 -
 	tests_run++;
 
-	Parseable expected_result3[] = {
+	Token expected_result3[] = {
 		{.number = 5.0, .operation = '#'},
 		{.number = 0.0, .operation = '~'},
 		{.number = 5.0, .operation = '#'},
 		{.number = 0.0, .operation = '*'},
 		{.number = 0.0, .operation = '!'}
 	};
-	expected_result_length = sizeof(expected_result3) / sizeof(Parseable);
+	expected_result_length = sizeof(expected_result3) / sizeof(Token);
 	tests_passed += run_parsing_test("-5*5", expected_result3, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 5 ~ 5 x
 	tests_run++;
 
-	Parseable expected_result4[] = {
+	Token expected_result4[] = {
 		{.number = 5.0, .operation = '#'},
 		{.number = 3.0, .operation = '#'},
 		{.number = 4.0, .operation = '#'},
@@ -84,11 +84,11 @@ void run_parsing_test_suite()
 		{.number = 0.0, .operation = '-'},
 		{.number = 0.0, .operation = '!'}
 	};
-	expected_result_length = sizeof(expected_result4) / sizeof(Parseable);
+	expected_result_length = sizeof(expected_result4) / sizeof(Token);
 	tests_passed += run_parsing_test("-3*4", expected_result4, expected_result_length, NO_ERROR, 5.0, 1, __LINE__); // 5 3 4 x - 
 	tests_run++;
 
-	Parseable expected_result5[] = {
+	Token expected_result5[] = {
 		{.number = 0.0,  .operation = '#'},
 		{.number = 3.11, .operation = '#'},
 		{.number = 4.83, .operation = '#'},
@@ -96,7 +96,7 @@ void run_parsing_test_suite()
 		{.number = 0.0,  .operation = '-'},
 		{.number = 0.0,  .operation = '!'}
 	};
-	expected_result_length = sizeof(expected_result5) / sizeof(Parseable);
+	expected_result_length = sizeof(expected_result5) / sizeof(Token);
 	tests_passed += run_parsing_test("-3.11*4.83", expected_result5, expected_result_length, NO_ERROR, 0.0, 1, __LINE__); // 5 3 4 x - 
 	tests_run++;
 
@@ -110,30 +110,30 @@ void run_parsing_test_suite()
 }
 
 int run_parsing_test(const char* expression, 
-					Parseable expected_result[], 
+					Token expected_result[], 
 					int expected_result_length, 
 					int expected_error_code, 
 					double previous_answer, 
 					int has_previous_answer, int line)
 {
-	Parseable* parsed_list = NULL;
-	int parsed_size = 0;
+	Token* token_list = NULL;
+	int token_list_size = 0;
 	int test_result = 0;
 	AnswerState ans_state = { .has_previous_answer = has_previous_answer, .previous_answer = previous_answer };
-	int error_code = parse(expression, strlen(expression), &parsed_list, &parsed_size, ans_state);
+	int error_code = parse(expression, strlen(expression), &token_list, &token_list_size, ans_state);
 	if (error_code != expected_error_code) {
 		printf("Test of expression %s at line %d failed mismatched error code\n", expression, line);
 	}
-	else if (!compare_parseable_list(parsed_list, parsed_size, expected_result, expected_result_length)) {
+	else if (!compare_token_list(token_list, token_list_size, expected_result, expected_result_length)) {
 		printf("Test of expression %s at line %d failed mismatched parsed list\n", expression, line);
 	}
 	else {
 		test_result = 1;
 	}
 
-	if (parsed_list != NULL) {
-		free(parsed_list);
-		parsed_list = NULL;
+	if (token_list != NULL) {
+		free(token_list);
+		token_list = NULL;
 	}
 	return test_result;
 }
@@ -203,26 +203,26 @@ int run_resolve_test(const char* expression, double expected_result,
 					double previous_answer, 
 					int has_previous_answer, int id)
 {
-	Parseable* parseables = NULL;
+	Token* tokens = NULL;
 	int size = 0;
 	int test_result = 0;
 	AnswerState ans_state = { .has_previous_answer = has_previous_answer, .previous_answer = previous_answer };
-	int error_code = parse(expression, (int)strlen(expression), &parseables, &size, ans_state);
+	int error_code = parse(expression, (int)strlen(expression), &tokens, &size, ans_state);
 	if (error_code != NO_ERROR) {
 		if (error_code == expected_error_code) {
-			if (parseables != NULL)
-				free(parseables);
+			if (tokens != NULL)
+				free(tokens);
 			return 1;
 		}
 		else {
 			printf("Test %d failed: Parsing of %s with %d\n", id, expression, error_code);
-			if(parseables != NULL)
-				free(parseables);
+			if(tokens != NULL)
+				free(tokens);
 			return 0;
 		}
 	}
 	double answer = 0.0;
-	error_code = resolve(parseables, &answer);
+	error_code = resolve(tokens, &answer);
 	if (error_code == NO_ERROR) {
 		if (!float_compare(answer, expected_result)) {
 			printf("Test %d failed: %s %.10g not matching %.10g\n", id, expression, answer, expected_result);
@@ -237,7 +237,7 @@ int run_resolve_test(const char* expression, double expected_result,
 	else {
 		printf("Test %d failed: %s with EC %d \n", id, expression, error_code);
 	}
-	free(parseables);
-	parseables = NULL;
+	free(tokens);
+	tokens = NULL;
 	return test_result;
 }

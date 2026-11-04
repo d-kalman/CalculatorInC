@@ -1,12 +1,12 @@
 #pragma once
-typedef struct Parseable_t
+typedef struct Token_t
 {
 	double number;
 	char operation;
-} Parseable;
-Parseable init_parseable();
+} Token;
+Token init_token();
 
-int compare_parseable_list(Parseable* list1, int size1, Parseable* list2, int size2);
-int compare_parseable(Parseable p1, Parseable p2);
-void print_parseable(Parseable p);
-void print_parseable_list(Parseable* parseables, int size);
+int compare_token_list(Token* list1, int size1, Token* list2, int size2);
+int compare_token(Token t1, Token t2);
+void print_token(Token t);
+void print_token_list(Token* tokens, int size);

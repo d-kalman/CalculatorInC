@@ -15,13 +15,13 @@ typedef struct Result_t {
 } Result;
 
 typedef struct Parse_result_t {
-	Parseable* parseables;
-	int parseables_size;
+	Token* tokens;
+	int tokens_size;
 	enum error_code error_code;
 } ParseResult;
 
 typedef struct Parser_state_t {
-	Parseable* parseables;
+	Token* tokens;
 	size_t capacity;
 	int end;
 	Stack* operator_stack_p;
@@ -39,6 +39,6 @@ int operator_precedence(char op);
 int operator_precedes(char op1, char op2, char associativity);
 char operator_associativity(char op);
 
-int parse(const char* string, size_t size, Parseable ** out_parseable, int* out_parsed_size, AnswerState ans_state);
+int parse(const char* string, size_t size, Token ** out_tokens, int* out_parsed_size, AnswerState ans_state);
 int process_line(const char* string, int size, double* answer, int* has_previous_answer);
-int resolve(Parseable* parseables, double* out_answer);
+int resolve(Token* tokens, double* out_answer);

@@ -6,13 +6,13 @@ void initialize_stack(Stack* stack) {
 	stack->top = -1;
 	return;
 }
-int push_to_stack(Stack* stack, Parseable p) {
+int push_to_stack(Stack* stack, Token t) {
 	int error_code = 0;
 	if (is_full(stack)) {
 		error_code = 1;
 	}
 	else {
-		stack->parseable_stack[++stack->top] = p;
+		stack->token_stack[++stack->top] = t;
 	}
 	return error_code;
 }
@@ -30,21 +30,21 @@ int is_empty(Stack* stack) {
 		return 0;
 }
 
-Parseable inspect(Stack* stack)
+Token inspect(Stack* stack)
 {
 	if (is_empty(stack)) {
-		return init_parseable();
+		return init_token();
 	}
-	return stack->parseable_stack[stack->top];
+	return stack->token_stack[stack->top];
 }
 
-Parseable pop_stack(Stack* stack) {
-	Parseable p = { .number = 0, .operation = '?' };
+Token pop_stack(Stack* stack) {
+	Token p = { .number = 0, .operation = '?' };
 	if (is_empty(stack)) {
 		return p;
 	}
 	else {
-		p = stack->parseable_stack[stack->top--];
+		p = stack->token_stack[stack->top--];
 		return p;
 	}
 }
@@ -55,20 +55,20 @@ void stack_tests()
 	Stack* stack_p = &stack;
 
 	initialize_stack(stack_p);
-	Parseable p = { .number = 2.0, .operation = '#' };
-	Parseable p2 = { .number = 1.0, .operation = '#' };
-	Parseable p3 = { .number = 0.0, .operation = '+' };
+	Token t = { .number = 2.0, .operation = '#' };
+	Token t2 = { .number = 1.0, .operation = '#' };
+	Token t3 = { .number = 0.0, .operation = '+' };
 
-	push_to_stack(stack_p, p);
-	assert(compare_parseable(inspect(stack_p), p));
-	push_to_stack(stack_p, p2);
-	assert(compare_parseable(inspect(stack_p), p2));
-	push_to_stack(stack_p, p3);
-	assert(compare_parseable(inspect(stack_p), p3));
+	push_to_stack(stack_p, t);
+	assert(compare_token(inspect(stack_p), t));
+	push_to_stack(stack_p, t2);
+	assert(compare_token(inspect(stack_p), t2));
+	push_to_stack(stack_p, t3);
+	assert(compare_token(inspect(stack_p), t3));
 
-	assert(compare_parseable(pop_stack(stack_p), p3));
-	assert(compare_parseable(pop_stack(stack_p), p2));
-	assert(compare_parseable(pop_stack(stack_p), p));
+	assert(compare_token(pop_stack(stack_p), t3));
+	assert(compare_token(pop_stack(stack_p), t2));
+	assert(compare_token(pop_stack(stack_p), t));
 
 	assert(is_empty(stack_p) == 1);
 }
