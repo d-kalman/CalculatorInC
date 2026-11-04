@@ -34,7 +34,7 @@ int main(int argc, char** argv)
 				continue;
 
 			int length = (int)strlen(line);
-			int error_code = process_line(line, length, &answer, &has_previous_answer);
+			ErrorCode error_code = process_line(line, length, &answer, &has_previous_answer);
 			if (error_code == NO_ERROR) {
 				printf("Answer: %.10g\n", answer);
 			}

@@ -207,7 +207,7 @@ int run_resolve_test(const char* expression, double expected_result,
 	int size = 0;
 	int test_result = 0;
 	AnswerState ans_state = { .has_previous_answer = has_previous_answer, .previous_answer = previous_answer };
-	int error_code = parse(expression, (int)strlen(expression), &tokens, &size, ans_state);
+	ErrorCode error_code = parse(expression, (int)strlen(expression), &tokens, &size, ans_state);
 	if (error_code != NO_ERROR) {
 		if (error_code == expected_error_code) {
 			if (tokens != NULL)

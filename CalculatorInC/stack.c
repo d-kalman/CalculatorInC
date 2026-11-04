@@ -7,14 +7,14 @@ void initialize_stack(Stack* stack) {
 	return;
 }
 int push_to_stack(Stack* stack, Token t) {
-	int error_code = 0;
+	int failed = 0;
 	if (is_full(stack)) {
-		error_code = 1;
+		failed = 1;
 	}
 	else {
 		stack->token_stack[++stack->top] = t;
 	}
-	return error_code;
+	return failed;
 }
 
 int is_full(Stack* stack) {
