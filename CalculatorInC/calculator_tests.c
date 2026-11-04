@@ -17,10 +17,10 @@ void run_operator_test_suite()
 	printf("Operator tests\n");
 	int tests_run = 4;
 	int tests_passed = 0;
-	tests_passed += run_operator_test('x', '/', 1);
-	tests_passed += run_operator_test('-', 'x', 0);
+	tests_passed += run_operator_test('*', '/', 1);
+	tests_passed += run_operator_test('-', '*', 0);
 	tests_passed += run_operator_test('+', '/', 0);
-	tests_passed += run_operator_test('x', '+',1);
+	tests_passed += run_operator_test('*', '+',1);
 	printf("\n--------------\n");
 }
 int run_operator_test(char op1, char op2, int expected_precedence)
@@ -41,14 +41,14 @@ void run_parsing_test_suite()
 		{.number = 1.0, .operation = '#'},
 		{.number = 2.0, .operation = '#' },
 		{.number = 3.0, .operation = '#' },
-		{.number = 0.0, .operation = 'x' },
+		{.number = 0.0, .operation = '*' },
 		{.number = 0.0, .operation = '+'},
 		{.number = 4.0, .operation = '#'},
 		{.number = 0.0, .operation = '-'},
 		{.number = 0.0, .operation = '!' }
 	};
 	expected_result_length = sizeof(expected_result) / sizeof(Parseable);
-	tests_passed += run_parsing_test("1.0 + 2.00 x 3 - 4.0", expected_result, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 1 2 3 x + 4 -
+	tests_passed += run_parsing_test("1.0 + 2.00 * 3 - 4.0", expected_result, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 1 2 3 x + 4 -
 	tests_run++;
 
 	Parseable expected_result2[] = {
@@ -56,48 +56,48 @@ void run_parsing_test_suite()
 		{.number = 2.0, .operation = '#'},
 		{.number = 0.0, .operation = '+'},
 		{.number = 3.0, .operation = '#'},
-		{.number = 0.0, .operation = 'x'},
+		{.number = 0.0, .operation = '*'},
 		{.number = 4.0, .operation = '#'},
 		{.number = 0.0, .operation = '-'},
 		{.number = 0.0, .operation = '!'}
 	};
 	expected_result_length = sizeof(expected_result2) / sizeof(Parseable);
-	tests_passed += run_parsing_test("(1.0 + 2.00) x 3 - 4.0", expected_result2, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 1 2 + 3 x 4 -
+	tests_passed += run_parsing_test("(1.0 + 2.00) * 3 - 4.0", expected_result2, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 1 2 + 3 x 4 -
 	tests_run++;
 
 	Parseable expected_result3[] = {
 		{.number = 5.0, .operation = '#'},
 		{.number = 0.0, .operation = '~'},
 		{.number = 5.0, .operation = '#'},
-		{.number = 0.0, .operation = 'x'},
+		{.number = 0.0, .operation = '*'},
 		{.number = 0.0, .operation = '!'}
 	};
 	expected_result_length = sizeof(expected_result3) / sizeof(Parseable);
-	tests_passed += run_parsing_test("-5x5", expected_result3, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 5 ~ 5 x
+	tests_passed += run_parsing_test("-5*5", expected_result3, expected_result_length, NO_ERROR, 0.0, 0, __LINE__); // 5 ~ 5 x
 	tests_run++;
 
 	Parseable expected_result4[] = {
 		{.number = 5.0, .operation = '#'},
 		{.number = 3.0, .operation = '#'},
 		{.number = 4.0, .operation = '#'},
-		{.number = 0.0, .operation = 'x'},
+		{.number = 0.0, .operation = '*'},
 		{.number = 0.0, .operation = '-'},
 		{.number = 0.0, .operation = '!'}
 	};
 	expected_result_length = sizeof(expected_result4) / sizeof(Parseable);
-	tests_passed += run_parsing_test("-3x4", expected_result4, expected_result_length, NO_ERROR, 5.0, 1, __LINE__); // 5 3 4 x - 
+	tests_passed += run_parsing_test("-3*4", expected_result4, expected_result_length, NO_ERROR, 5.0, 1, __LINE__); // 5 3 4 x - 
 	tests_run++;
 
 	Parseable expected_result5[] = {
 		{.number = 0.0,  .operation = '#'},
 		{.number = 3.11, .operation = '#'},
 		{.number = 4.83, .operation = '#'},
-		{.number = 0.0,  .operation = 'x'},
+		{.number = 0.0,  .operation = '*'},
 		{.number = 0.0,  .operation = '-'},
 		{.number = 0.0,  .operation = '!'}
 	};
 	expected_result_length = sizeof(expected_result5) / sizeof(Parseable);
-	tests_passed += run_parsing_test("-3.11x4.83", expected_result5, expected_result_length, NO_ERROR, 0.0, 1, __LINE__); // 5 3 4 x - 
+	tests_passed += run_parsing_test("-3.11*4.83", expected_result5, expected_result_length, NO_ERROR, 0.0, 1, __LINE__); // 5 3 4 x - 
 	tests_run++;
 
 	//End tests
@@ -143,17 +143,17 @@ void run_resolve_test_suite()
 	static const struct { const char* expression; double expected; int error_code; double previous_answer; int has_previous_answer; } cases[] = {
 		//Basic arithmetics
 		{ "1.0 + 2.00",       3.0,   NO_ERROR, 0, 0     },
-		{ "1.5+2.11x3.2-4.1", 4.152, NO_ERROR, 0, 0     },
-		{ "2+3x4",            14.0,  NO_ERROR, 0, 0     },
-		{ "(2+3)x4",          20.0,  NO_ERROR, 0, 0     },
+		{ "1.5+2.11*3.2-4.1", 4.152, NO_ERROR, 0, 0     },
+		{ "2+3*4",            14.0,  NO_ERROR, 0, 0     },
+		{ "(2+3)*4",          20.0,  NO_ERROR, 0, 0     },
 		{ "10/4",             2.5,   NO_ERROR, 0, 0     },
 		//Unary operator and chaining
-		{ "-5x3",            -15,    NO_ERROR, 0, 0     },
-		{ "-3x4",            -7,     NO_ERROR, 5, 1     },
-		{ "-3x-4",            17,    NO_ERROR, 5, 1     },
-		{ "-3x-3",            9,     NO_ERROR, 0, 0     },
-		{ "(-2)x(-2)",        4,     NO_ERROR, 0, 0     },
-		{ "(-2)x8",          -16,    NO_ERROR, 0, 0     },
+		{ "-5*3",            -15,    NO_ERROR, 0, 0     },
+		{ "-3*4",            -7,     NO_ERROR, 5, 1     },
+		{ "-3*-4",            17,    NO_ERROR, 5, 1     },
+		{ "-3*-3",            9,     NO_ERROR, 0, 0     },
+		{ "(-2)*(-2)",        4,     NO_ERROR, 0, 0     },
+		{ "(-2)*8",          -16,    NO_ERROR, 0, 0     },
 		{ "--(-3.451)",      -3.451, NO_ERROR, 0, 0     },
 		{ "+-(+137.8651)",   -137.8651, NO_ERROR, 0, 0  },
 		//Exponentiation
@@ -161,7 +161,7 @@ void run_resolve_test_suite()
 		{ "4^0.5",            2,     NO_ERROR, 0, 0  }, //root
 		{ "2 ^ 3 ^ 2",            512,     NO_ERROR, 0, 0  }, //right associativity
 		{ "(2 ^ 3) ^ 2",          64,     NO_ERROR, 0, 0  },
-		{ "2 ^ 3 x 2",            16,     NO_ERROR, 0, 0  },
+		{ "2 ^ 3 * 2",            16,     NO_ERROR, 0, 0  },
 		{ "(-1) ^ 3",            -1,     NO_ERROR, 0, 0  },
 		{ "2^-3^2", 0.001953125,     NO_ERROR, 0, 0 },
 		//Logical errors
@@ -177,7 +177,7 @@ void run_resolve_test_suite()
 		{ "99999999999999999999 + 1", 1e20, NO_ERROR, 0, 0}, //number just fits 
 		{ "999999999999999999999 + 1", 0, INPUT_ERROR, 0, 0}, //number too long issue
 		{ "(2 + )", 0, PARSING_ERROR, 0, 0},
-		{ "2x()", 0, PARSING_ERROR, 0, 0},
+		{ "2*()", 0, PARSING_ERROR, 0, 0},
 		{ "(-)", 0, PARSING_ERROR, 0, 0},		
 	};
 	int tests_passed = 0;

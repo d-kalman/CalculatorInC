@@ -25,7 +25,7 @@ static int allowed_input_operation(char c)
 }
 static int allowed_followup_operation(char c) {
 	switch (c) {
-	case 'x':
+	case '*':
 	case '+':
 	case '/':
 	case '-':
@@ -48,7 +48,7 @@ int operator_precedence(char op) {
 		return 4;
 	case '~':
 		return 3;
-	case 'x':
+	case '*':
 	case '/':
 		return 2;
 	case '+':
@@ -191,7 +191,7 @@ static int parse_operator(ParserState* state, Parseable p) {
 				error_code = PARSING_ERROR;
 			}
 			break;
-		case 'x':
+		case '*':
 		case '/':
 		case '^':
 			error_code = parse_arithmetic_operator(state, p);
@@ -257,7 +257,7 @@ static double resolve_operation(double lo, double ro, char operation)
 		return lo + ro;
 	case '-':
 		return lo - ro;
-	case 'x':
+	case '*':
 		return lo * ro;
 	case '/':
 		return lo / ro;
