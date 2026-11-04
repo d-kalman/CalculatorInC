@@ -27,7 +27,7 @@
     <ClCompile Include="calculator.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="parseable.c">
+    <ClCompile Include="token.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="calculator_util.c">
@@ -44,7 +44,7 @@
     <ClInclude Include="stack.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="parseable.h">
+    <ClInclude Include="token.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="calculator_util.h">

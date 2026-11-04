@@ -1,7 +1,7 @@
 #include <stdio.h>
 
 #include "calculator_util.h"
-#include "parseable.h"
+#include "token.h"
 
 
 int compare_token_list(Token* list1, int size1, Token* list2, int size2) {

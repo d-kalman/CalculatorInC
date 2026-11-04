@@ -8,6 +8,18 @@
 #include "stack.h"
 #include "calculator.h"
 
+static int allowed_followup_operation(char c) {
+	switch (c) {
+	case '*':
+	case '/':
+	case '+':
+	case '-':
+		return 1;
+	default:
+		return 0;
+	}
+}
+
 static int allowed_input_operation(char c)
 {
 	int allowed = 0;
@@ -23,17 +35,7 @@ static int allowed_input_operation(char c)
 	}
 	return allowed;
 }
-static int allowed_followup_operation(char c) {
-	switch (c) {
-	case '*':
-	case '/':
-	case '+':
-	case '-':
-		return 1;
-	default:
-		return 0;
-	}
-}
+
 
 char operator_associativity(char op) {
 	char associativity = 'L';

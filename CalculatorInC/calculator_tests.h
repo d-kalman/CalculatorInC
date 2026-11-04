@@ -1,5 +1,5 @@
 #pragma once
-#include "parseable.h"
+#include "token.h"
 
 void run_calculator_test_suite();
 void run_parsing_test_suite();

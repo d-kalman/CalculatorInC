@@ -180,13 +180,13 @@
     <ClCompile Include="calculator_in_c.c" />
     <ClCompile Include="calculator_tests.c" />
     <ClCompile Include="calculator_util.c" />
-    <ClCompile Include="parseable.c" />
+    <ClCompile Include="token.c" />
     <ClCompile Include="stack.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="calculator.h" />
     <ClInclude Include="calculator_tests.h" />
-    <ClInclude Include="parseable.h" />
+    <ClInclude Include="token.h" />
     <ClInclude Include="stack.h" />
     <ClInclude Include="calculator_util.h" />
   </ItemGroup>
