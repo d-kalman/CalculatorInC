@@ -10,7 +10,7 @@ int compare_token_list(TokenList* list1, TokenList* list2) {
 		return 0;
 	if (list1->end != list2->end)
 		return 0;
-	for (int i = 0; i < list1->end; ++i)
+	for (size_t i = 0; i < list1->end; ++i)
 		if (!compare_token(list1->tokens[i], list2->tokens[i]))
 			return 0;
 	//return list1[size1 - 1].operation == '!' && list2[size2 - 1].operation == '!';
@@ -46,10 +46,10 @@ TokenList* create_token_list(size_t capacity)
 	return tl;
 }
 void free_token_list(TokenList* tl) {
-	if (tl && tl->tokens) {
-		free(tl->tokens);
-		free(tl);
-	}
+	if (!tl)
+		return;
+	free(tl->tokens);
+	free(tl);
 }
 
 Token create_token()
@@ -113,7 +113,7 @@ void print_token(Token t)
 
 void print_token_list(TokenList* token_list)
 {
-	for (int i = 0; i < token_list->end; ++i) {
+	for (size_t i = 0; i < token_list->end; ++i) {
 		print_token(token_list->tokens[i]);
 	}
 }

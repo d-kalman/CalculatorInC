@@ -1,5 +1,8 @@
 #pragma once
 
+#define MAX_NUMBER_LENGTH 20
+#define MAX_EXPRESSION_LENGTH 120
+
 int float_compare(double left, double right);
 
 typedef enum {

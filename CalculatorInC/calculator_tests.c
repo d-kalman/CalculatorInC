@@ -4,6 +4,7 @@
 #include "calculator_tests.h"
 #include "calculator_util.h"
 #include "calculator.h"
+#include "operators.h"
 
 void run_calculator_test_suite()
 {
@@ -26,7 +27,7 @@ void run_operator_test_suite()
 int run_operator_test(char op1, char op2, int expected_precedence)
 {
 
-	if (operator_precedes(op1, op2, operator_associativity(op2)) == expected_precedence)
+	if (operator_precedes(op1, op2) == expected_precedence)
 		return 1;
 	else
 		return 0;
