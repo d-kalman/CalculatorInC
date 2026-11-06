@@ -12,3 +12,11 @@ typedef enum {
 	INPUT_ERROR = 300,
 	LOGICAL_ERROR = 400
 } ErrorCode;
+
+typedef enum {
+	NOT_FUNCTION,
+	SIN,
+	COS,
+	ABS,
+	FUNCTION_COUNT
+} FunctionId;

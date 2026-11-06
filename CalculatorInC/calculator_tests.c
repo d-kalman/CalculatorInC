@@ -5,12 +5,14 @@
 #include "calculator_util.h"
 #include "calculator.h"
 #include "operators.h"
+#include "function.h"
 
 void run_calculator_test_suite()
 {
 	run_operator_test_suite();
 	run_parsing_test_suite();
 	run_resolve_test_suite();
+	function_test();
 }
 
 void run_operator_test_suite()

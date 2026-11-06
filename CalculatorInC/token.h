@@ -1,7 +1,10 @@
 #pragma once
 
+#define MAX_FUNCTION_ARGS 8
+
 #include <stddef.h>
 #include "calculator_util.h"
+
 typedef enum {
     TOK_NUMBER,
     TOK_OPERATOR,
@@ -10,13 +13,6 @@ typedef enum {
     TOK_RPAREN,
     TOK_INVALID
 } TokenType;
-
-typedef enum {
-    NOT_FUNCTION,
-    SIN,
-    COS,
-    ABS
-} FunctionId;
 
 typedef struct Token_t
 {
