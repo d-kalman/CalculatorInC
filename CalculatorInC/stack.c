@@ -33,13 +33,13 @@ int is_empty(Stack* stack) {
 Token inspect(Stack* stack)
 {
 	if (is_empty(stack)) {
-		return init_token();
+		return create_token();
 	}
 	return stack->token_stack[stack->top];
 }
 
 Token pop_stack(Stack* stack) {
-	Token p = { .number = 0, .operation = '?' };
+	Token p = create_token();
 	if (is_empty(stack)) {
 		return p;
 	}
@@ -55,9 +55,9 @@ void stack_tests()
 	Stack* stack_p = &stack;
 
 	initialize_stack(stack_p);
-	Token t = { .number = 2.0, .operation = '#' };
-	Token t2 = { .number = 1.0, .operation = '#' };
-	Token t3 = { .number = 0.0, .operation = '+' };
+	Token t = create_num_token(2.0);
+	Token t2 = create_num_token(1.0);
+	Token t3 = create_num_token(0.0);
 
 	push_to_stack(stack_p, t);
 	assert(compare_token(inspect(stack_p), t));

@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 		run_calculator_test_suite();
 	}
 	else {
-		char line[120];
+		char line[MAX_EXPRESSION_LENGTH];
 		double answer = 0;
 		int has_previous_answer = 0;
 		while (fgets(line, sizeof(line), stdin) != NULL) {
