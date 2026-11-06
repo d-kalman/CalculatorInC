@@ -64,24 +64,27 @@ Token create_num_token(double num)
 	return t;
 }
 
-Token create_func_token(FunctionId function_id)
+Token create_func_token(FunctionId function_id, int argc)
 {
-	Token t = {.type = TOK_FUNCTION, .number = 0, .operation = 'f', .function_id = function_id };
+	Token t = {.type = TOK_FUNCTION, .number = 0, .operation = 'f', .function_id = function_id, .argc = argc};
 	return t;
 }
 
 Token create_op_token(char c)
 {
-	Token t = { .number = 0, .operation = c, .function_id = NOT_FUNCTION };
+	Token t = { .number = 0, .operation = c, .function_id = NOT_FUNCTION};
 	switch (c) {
 	case '(':
 		t.type = TOK_LPAREN;
+		t.argc = 0;
 		break;
 	case ')':
 		t.type = TOK_RPAREN;
+		t.argc = 0;
 		break;
 	default:
 		t.type = TOK_OPERATOR;
+		t.argc = 2;
 	}
 	return t;
 }

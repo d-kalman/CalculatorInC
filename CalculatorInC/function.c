@@ -47,7 +47,7 @@ ErrorCode apply_function(Stack* stack, Token t, double* out_result, int argc)
 	ErrorCode error_code = NO_ERROR;
     if (t.function_id == NOT_FUNCTION)
         return PARSING_ERROR;
-    Function* func = get_function(t.function_id);
+    const Function* func = get_function(t.function_id);
     if (argc > func->max_args || argc < func->min_args)
         return PARSING_ERROR;
 
@@ -56,12 +56,7 @@ ErrorCode apply_function(Stack* stack, Token t, double* out_result, int argc)
         return MEMORY_ERROR;
     FunctionFn callable = func->function;
 
-    for (int i = argc - 1; i >= 0; --i) {
-        Token t = pop_stack(stack);
-        if (t.type == TOK_INVALID)
-            error_code = PARSING_ERROR;
-            break;
-    }
+    error_code = validate_stack_and_pop(stack, t, args);
     if (!error_code) {
         callable(args, argc, out_result);
     }
@@ -77,14 +72,14 @@ int function_test() {
     initialize_stack(stack_p);
     Token t = create_num_token(1.57);
     push_to_stack(stack_p, t);
-    Token t_op = create_func_token(SIN);
+    Token t_op = create_func_token(SIN, 1);
     double result = 0.0;
     apply_function(stack_p, t_op, &result, 1);
     printf("%f\n", result);
 
     t = create_num_token(-1.57);
     push_to_stack(stack_p, t);
-    t_op = create_func_token(ABS);
+    t_op = create_func_token(ABS, 1);
     apply_function(stack_p, t_op, &result, 1);
     printf("%f\n", result);
     return 0;

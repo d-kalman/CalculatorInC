@@ -32,6 +32,7 @@ static ErrorCode parse_unary(ParserState* state, Token t) {
 		//Unary operator
 		else {
 			t.operation = '~';
+			t.argc = 1;
 			if (push_to_stack(state->operator_stack_p, t))
 				error_code = MEMORY_ERROR;
 		}
