@@ -4,9 +4,20 @@
 #include <string.h>
 #include <math.h>
 
-#include "calculator_util.h"
 #include "stack.h"
 #include "calculator.h"
+
+static int allowed_followup_operation(char c) {
+	switch (c) {
+	case '*':
+	case '/':
+	case '+':
+	case '-':
+		return 1;
+	default:
+		return 0;
+	}
+}
 
 static int allowed_input_operation(char c)
 {
@@ -23,17 +34,6 @@ static int allowed_input_operation(char c)
 	}
 	return allowed;
 }
-static int allowed_followup_operation(char c) {
-	switch (c) {
-	case 'x':
-	case '+':
-	case '/':
-	case '-':
-		return 1;
-	default:
-		return 0;
-	}
-}
 
 char operator_associativity(char op) {
 	char associativity = 'L';
@@ -48,7 +48,7 @@ int operator_precedence(char op) {
 		return 4;
 	case '~':
 		return 3;
-	case 'x':
+	case '*':
 	case '/':
 		return 2;
 	case '+':
@@ -57,6 +57,17 @@ int operator_precedence(char op) {
 	default:
 		return 0;
 	}
+}
+
+static FunctionId get_function_id(char* func_name) {
+	if (strcmp(func_name, "sin") == 0)
+		return SIN;
+	else if(strcmp(func_name, "cos") == 0)
+		return COS;
+	else if (strcmp(func_name, "abs") == 0)
+		return ABS;
+	else
+		return NOT_FUNCTION;
 }
 
 int operator_precedes(char op1, char op2, char associativity) {
@@ -78,20 +89,8 @@ int operator_precedes(char op1, char op2, char associativity) {
 	return preceeds;
 }
 
-
-static int add_parseable(ParserState* state, Parseable p) {
-	int error_code = 0;
-	if (state->end >= state->capacity - 1) {
-		error_code = MEMORY_ERROR;
-	}
-	else{
-		state->parseables[state->end++] = p;
-	}
-	return error_code;
-}
-
-static int drain_operator_stack(ParserState* state) {
-	int error_code = NO_ERROR;
+static ErrorCode drain_operator_stack(ParserState* state) {
+	ErrorCode error_code = NO_ERROR;
 	while (!is_empty(state->operator_stack_p)) {
 		//Unmatched bracket, error
 		if (inspect(state->operator_stack_p).operation == '(') {
@@ -99,60 +98,65 @@ static int drain_operator_stack(ParserState* state) {
 			break;
 		}
 		else {
-			error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+			error_code = add_token(state->rpn_tokens, pop_stack(state->operator_stack_p));
 			if (error_code)
 				break;
 		}
 	}
 	return error_code;
 }
-static int parse_arithmetic_operator(ParserState* state, Parseable p) {
-	int error_code = NO_ERROR;
+
+static ErrorCode parse_arithmetic_operator(ParserState* state, Token t) {
+	ErrorCode error_code = NO_ERROR;
+	
+	if (state->operator_expected == 0)
+		return PARSING_ERROR;
+
 	while (!is_empty(state->operator_stack_p) &&
 		operator_precedes(inspect(state->operator_stack_p).operation,
-			p.operation,
-			operator_associativity(p.operation)))
+			t.operation,
+			operator_associativity(t.operation)))
 	{
-		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+		error_code = add_token(state->rpn_tokens, pop_stack(state->operator_stack_p));
 		if (error_code)
 			return error_code;
 	}
-	if (push_to_stack(state->operator_stack_p, p))
+	if (push_to_stack(state->operator_stack_p, t))
 		error_code = MEMORY_ERROR;
 	state->operator_expected = 0;
 	return error_code;
 }
 
-static int parse_unary(ParserState* state, Parseable p) {
-	int error_code = NO_ERROR;
-	if (p.operation == '-') {
+static ErrorCode parse_unary(ParserState* state, Token t) {
+	ErrorCode error_code = NO_ERROR;
+	if (t.operation == '-') {
 		if (state->operator_expected) {
-			error_code = parse_arithmetic_operator(state, p);
+			error_code = parse_arithmetic_operator(state, t);
 		}
 		//Unary operator
 		else {
-			p.operation = '~';
-			if (push_to_stack(state->operator_stack_p, p))
+			t.operation = '~';
+			if (push_to_stack(state->operator_stack_p, t))
 				error_code = MEMORY_ERROR;
 		}
 	}
-				
-	else if (p.operation == '+') {
+
+	else if (t.operation == '+') {
 		//Unary + operator: skip
 		//TODO: Decide if we want to do something with this.
-		if(state->operator_expected)
-			error_code = parse_arithmetic_operator(state, p);
+		if (state->operator_expected)
+			error_code = parse_arithmetic_operator(state, t);
 	}
 	state->operator_expected = 0;
 	return error_code;
 }
 
-static int parse_close_paren(ParserState* state) {
-	int error_code = NO_ERROR;
+static ErrorCode parse_close_paren(ParserState* state) {
+	ErrorCode error_code = NO_ERROR;
 	if (state->operator_expected == 0)
 		return PARSING_ERROR;
 	while (!is_empty(state->operator_stack_p) && inspect(state->operator_stack_p).operation != '(') {
-		error_code = add_parseable(state, pop_stack(state->operator_stack_p));
+		error_code = add_token(state->rpn_tokens, pop_stack(state->operator_stack_p));
 		if (error_code)
 			return error_code;
 	}
@@ -168,22 +172,24 @@ static int parse_close_paren(ParserState* state) {
 	state->operator_expected = 1;
 	return error_code;
 }
-static int parse_operator(ParserState* state, Parseable p) {
-	int error_code = NO_ERROR;
-	if (!allowed_input_operation(p.operation)) {
+
+static ErrorCode parse_operator(ParserState* state, Token t) {
+	ErrorCode error_code = NO_ERROR;
+	if (!allowed_input_operation(t.operation)) {
 		error_code = INPUT_ERROR;
 	}
 	else {
-		switch (p.operation) {
+		switch (t.operation) {
 		case '-':
 		case '+':
-			error_code = parse_unary(state, p);
+			error_code = parse_unary(state, t);
 			break;
 		case '(':
 			if (state->operator_expected == 0) {
-				if (push_to_stack(state->operator_stack_p, p)) {
+				if (push_to_stack(state->operator_stack_p, t)) {
 					error_code = MEMORY_ERROR;
-				} else {
+				}
+				else {
 					state->operator_expected = 0;
 				}
 			}
@@ -191,10 +197,10 @@ static int parse_operator(ParserState* state, Parseable p) {
 				error_code = PARSING_ERROR;
 			}
 			break;
-		case 'x':
+		case '*':
 		case '/':
 		case '^':
-			error_code = parse_arithmetic_operator(state, p);
+			error_code = parse_arithmetic_operator(state, t);
 			break;
 		case ')':
 			error_code = parse_close_paren(state);
@@ -205,18 +211,14 @@ static int parse_operator(ParserState* state, Parseable p) {
 	return error_code;
 }
 
-static int parse_number(Input* input, ParserState* state) {
+static ErrorCode parse_number(Input* input, ParserState* state) {
 	int number_index = 0;
-	char number[MAX_NUMBER_LENGTH+1] = { '#' };
-	int error_code = NO_ERROR;
-	if (state->operator_expected == 1) {
-		error_code = PARSING_ERROR;
-		return error_code;
-	}
+	char number[MAX_NUMBER_LENGTH + 1] = { '#' };
+	ErrorCode error_code = NO_ERROR;
 	int point_found = 0;
 	while (input->index < input->size &&
 		(input->line[input->index] == '.' || (input->line[input->index] >= '0' && input->line[input->index] <= '9')))
-		{
+	{
 		if (number_index >= MAX_NUMBER_LENGTH) {
 			error_code = INPUT_ERROR;
 			return error_code;
@@ -237,14 +239,116 @@ static int parse_number(Input* input, ParserState* state) {
 		number[number_index] = '\0';
 		char* endptr = NULL;
 		double num = strtod(number, &endptr);
-		number_index = 0;
-		//Add number to the output
-		Parseable p = { .number = num, .operation = '#' };
-		error_code = add_parseable(state, p);
+		////Add number to the parsed tokens
+		Token t = create_num_token(num);
+		error_code = add_token(state->parsed_tokens, t);
 	}
-	state->operator_expected = 1;
 	return error_code;
 }
+
+static ErrorCode parse_function_token(Input* input, ParserState* state) {
+	ErrorCode error_code = NO_ERROR;
+	int name_index = 0;
+	char name[MAX_NUMBER_LENGTH + 1] = { '#' };
+
+	while (input->index < input->size && input->line[input->index] != '(')
+	{
+		if (name_index >= MAX_NUMBER_LENGTH) {
+			error_code = INPUT_ERROR;
+			return error_code;
+		}
+		name[name_index] = input->line[input->index];
+		name_index++;
+		input->index++;
+	}
+	if (input->line[input->index] != '(') {
+		error_code = INPUT_ERROR;
+		return error_code;
+	}
+	input->index--;
+	if (name_index > 0)
+	{
+		name[name_index] = '\0';
+		char* endptr = NULL;
+		
+		Token t = create_func_token(get_function_id(name));
+		if (t.function_id == NOT_FUNCTION)
+			error_code = PARSING_ERROR;
+		else
+			error_code = add_token(state->parsed_tokens, t);
+	}
+	return error_code;
+}
+
+ErrorCode tokenize(Input* input, ParserState* state, size_t begin) {
+	ErrorCode error_code = NO_ERROR;
+	for (input->index = begin; input->index < input->size; ++(input->index)) {
+		//skip whitespace
+		char current_char = input->line[input->index];
+		if (current_char == ' ')
+			continue;
+
+		if ((current_char >= '0' && current_char <= '9')) {
+			error_code = parse_number(input, state);
+			if (error_code != 0)
+				return error_code;
+		}
+		else if (current_char >= 'a' && current_char <= 'z') {
+			error_code = parse_function_token(input, state);
+		}
+
+		else if (current_char == '(' || current_char == ')') {
+			Token t = create_op_token(current_char);
+			error_code = add_token(state->parsed_tokens, t);
+		}
+		else {
+			Token t = create_op_token(current_char);
+			if (allowed_input_operation(t.operation)) {
+				error_code = add_token(state->parsed_tokens, t);
+			}
+			else {
+				error_code = INPUT_ERROR;
+			}
+		}
+		if (error_code)
+			break;
+	}
+	return error_code;
+}
+
+ErrorCode to_rpn(ParserState* state)
+{
+	ErrorCode error_code = NO_ERROR;
+	TokenList* token_list = state->parsed_tokens;
+	state->operator_expected = 0;
+	for (int i = 0; i < token_list->end; ++i) {
+		Token t = token_list->tokens[i];
+		switch (t.type) {
+		case TOK_NUMBER:
+			if (state->operator_expected == 1)
+				error_code = PARSING_ERROR;
+			else {
+				error_code = add_token(state->rpn_tokens, t);
+				state->operator_expected = 1;
+			}
+			break;
+		case TOK_LPAREN:
+			if (state->operator_expected == 1)
+				error_code = PARSING_ERROR;
+			else {
+				error_code = parse_operator(state, t);
+			}
+			break;
+		case TOK_OPERATOR:
+		case TOK_RPAREN:
+			error_code = parse_operator(state, t);
+		}
+		if (error_code)
+			break;
+	}
+	return error_code;
+}
+
 
 static double resolve_operation(double lo, double ro, char operation)
 {
@@ -257,7 +361,7 @@ static double resolve_operation(double lo, double ro, char operation)
 		return lo + ro;
 	case '-':
 		return lo - ro;
-	case 'x':
+	case '*':
 		return lo * ro;
 	case '/':
 		return lo / ro;
@@ -284,13 +388,19 @@ static int validate_logic(double lo, double ro, char operation) {
 	}
 }
 
-int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* out_parsed_size, AnswerState answer_state) {
+ErrorCode parse(const char* l_string, size_t l_size, TokenList** out_tokens, AnswerState answer_state) {
 
 	Input input = { .line = l_string, .size = l_size, .capacity = l_size + 2, .index = 0};
-	Parseable* parseables = (Parseable*)malloc(input.capacity * sizeof(Parseable));
-	if (parseables == NULL) {
-		*out_parseable = NULL;
-		*out_parsed_size = 0;
+	TokenList* parsed_tokens = create_token_list(input.capacity);
+
+	if (parsed_tokens == NULL) {
+		*out_tokens = NULL;
+		return MEMORY_ERROR;
+	}
+	TokenList* rpn_tokens = create_token_list(input.capacity);
+	if (rpn_tokens == NULL) {
+		free_token_list(parsed_tokens);
+		*out_tokens = NULL;
 		return MEMORY_ERROR;
 	}
 
@@ -298,17 +408,13 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 	Stack* operator_stack_p = &operator_stack;
 	initialize_stack(operator_stack_p);
 
-
-	ParserState parser_state = { .parseables = parseables,
-								.end = 0, .capacity = input.capacity,
+	ParserState parser_state = {.parsed_tokens = parsed_tokens,
+								.rpn_tokens = rpn_tokens,
 								.operator_stack_p = operator_stack_p,
 								.operator_expected = 0};
 	ParserState* parser_state_p = &parser_state;
-	*out_parsed_size = 0;
-	int error_code = NO_ERROR;
-	//An operator needs both a left and a right operand.
-	//int operator_expected = 0;
-	//Discard leading whitespace
+	ErrorCode error_code = NO_ERROR;
+
 	int begin = 0;
 	while (begin < input.size && input.line[begin] == ' ') {
 		begin++;
@@ -320,31 +426,18 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 		
 	//If the line reuses the previous answer, insert it as the first parseable
 	if (allowed_followup_operation(input.line[begin]) && answer_state.has_previous_answer) {
-		Parseable p = { .number = answer_state.previous_answer, .operation = '#' };
-		error_code = add_parseable(parser_state_p, p);
+		Token t = create_num_token(answer_state.previous_answer);
+		error_code = add_token(parser_state_p->parsed_tokens, t);
 		if (error_code != 0)
 			goto cleanup_on_error;
-		parser_state.operator_expected = 1;
 	}
 
-	for (input.index = begin; input.index < input.size; ++input.index) {
-		//skip whitespace
-		char current_char = input.line[input.index];
-		if (current_char == ' ')
-			continue;
-
-		if ((current_char >= '0' && current_char <= '9')) {
-			error_code = parse_number(&input, parser_state_p);
-			if (error_code != 0)
-				goto cleanup_on_error;
-		} else {
-			Parseable current_operator = { .number = 0.0, .operation = current_char };
-			error_code = parse_operator(parser_state_p, current_operator);
-			if (error_code != 0)
-				goto cleanup_on_error;
-		}
-	}
-
+	error_code = tokenize(&input, parser_state_p, begin);
+	if (error_code)
+		goto cleanup_on_error;
+	error_code = to_rpn(parser_state_p);
+	if (error_code)
+		goto cleanup_on_error;
 
 	//State left by trailing operator
 	if (parser_state.operator_expected == 0) {
@@ -354,74 +447,104 @@ int parse(const char* l_string, size_t l_size, Parseable** out_parseable, int* o
 
 	//Empty out the operator stack too
 	error_code = drain_operator_stack(parser_state_p);
-	if (error_code != 0)
+	if (error_code)
 		goto cleanup_on_error;
 
-	//Add a close, so the resolver knows where to end
-	Parseable p = { .number = 0.0, .operation = '!' };
-	parser_state.parseables[parser_state.end] = p;
-	*out_parseable = parser_state.parseables;
-	*out_parsed_size = parser_state.end + 1;
+	*out_tokens = parser_state.rpn_tokens;
+	free_token_list(parsed_tokens);
 	return NO_ERROR;
 
 cleanup_on_error:
-	free(parseables);
-	*out_parseable = NULL;
+	free_token_list(parsed_tokens);
+	free_token_list(rpn_tokens);
+	*out_tokens = NULL;
 	return error_code;
 }
 
-//Changes answer only on success
-int process_line(const char* string, int size, double* answer, int* has_previous_answer)
+ErrorCode process_line(const char* string, int size, double* answer, int* has_previous_answer)
 {
-	Parseable* parseable_list = NULL;
-	int list_size = 0;
+	TokenList* token_list = NULL;
 	AnswerState ans_state = { .has_previous_answer = *has_previous_answer, .previous_answer = *answer };
-	int error_code = parse(string, size, &parseable_list, &list_size, ans_state);
+	ErrorCode error_code = parse(string, size, &token_list, ans_state);
 
 	if (error_code == NO_ERROR) {
-		error_code = resolve(parseable_list, answer);
+		error_code = resolve(token_list, answer);
 		if (error_code == NO_ERROR) {
 			*has_previous_answer = 1;
 		}
 	}
-	free(parseable_list);
-	parseable_list = NULL;
+	if(token_list != NULL)
+		free_token_list(token_list);
 	return error_code;
 }
 
-int resolve(Parseable* parseables, double* out_answer) {
-	int index = 0;
+static int operands_needed(const Token* t) {
+	if (t->operation == '~')
+		return 1;
+	else if (t->type == TOK_FUNCTION)
+		return 1;
+	else if (t->type == TOK_OPERATOR)
+		return 2;
+	else
+		return 0;
+}
+
+static ErrorCode validate_stack_and_pop(Stack* stack, const Token* t, double* lo, double* ro) {
 	int error_code = NO_ERROR;
+	int needed = operands_needed(t);
+	if (needed == 0 || stack->top + 1 < needed) {
+		error_code = PARSING_ERROR;
+	}
+	else {
+		if (needed >= 1)
+			*ro = pop_stack(stack).number;
+		if (needed >= 2)
+			*lo = pop_stack(stack).number;
+	}
+	return error_code;
+}
+
+ErrorCode resolve(const TokenList* token_list, double* out_answer)
+{
+	int index = 0;
+	ErrorCode error_code = NO_ERROR;
 	Stack stack;
 	Stack* stack_p = &stack;
 	initialize_stack(stack_p);
-	while (parseables[index].operation != '!') {
-		Parseable p = parseables[index];
-		if (parseables[index].operation == '#') {
-			if (push_to_stack(stack_p, p)) {
+	while (index < token_list->end) {
+		Token t = token_list->tokens[index];
+		if (t.type == TOK_NUMBER) {
+			if (push_to_stack(stack_p, t)) {
 				error_code = MEMORY_ERROR;
 				break;
 			}
 		}
+		else if (t.type == TOK_FUNCTION) {
+			//Function support is not implemented yet
+			error_code = PARSING_ERROR;
+			break;
+		}
 		else {
 			double ro = 0;
 			double lo = 0;
-			ro = pop_stack(stack_p).number;
-			if (p.operation != '~') {
-				lo = pop_stack(stack_p).number;
-			}
-			if (!validate_logic(lo, ro, p.operation)) {
+			error_code = validate_stack_and_pop(stack_p, &t, &lo, &ro);
+			if (error_code)
+				break;
+			if (!validate_logic(lo, ro, t.operation)) {
 				error_code = LOGICAL_ERROR;
 				break;
 			}
-			Parseable result = { .number = resolve_operation(lo, ro, p.operation), .operation = '#' };
-			push_to_stack(stack_p, result);
+			Token result = create_num_token(resolve_operation(lo, ro, t.operation));
+			if (push_to_stack(stack_p, result)) {
+				error_code = MEMORY_ERROR;
+				break;
+			}
 		}
 		index++;
 	}
 	if (error_code != NO_ERROR)
 		return error_code;
-	if (!is_empty(stack_p)) {
+	if (stack_p->top == 0) {
 		*out_answer = inspect(stack_p).number;
 	}
 	else {
