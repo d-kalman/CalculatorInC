@@ -110,7 +110,7 @@ static ErrorCode parse_function_token(Input* input, ParserState* state) {
 		name[name_index] = '\0';
 		char* endptr = NULL;
 
-		Token t = create_func_token(get_function_id(name));
+		Token t = create_func_token(get_function_id(name), 1); //TODO: dynamic calculation of function arguments
 		if (t.function_id == NOT_FUNCTION)
 			error_code = PARSING_ERROR;
 		else

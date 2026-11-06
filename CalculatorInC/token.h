@@ -20,6 +20,7 @@ typedef struct Token_t
 	double number;
 	char operation;
     FunctionId function_id;
+    int argc;
 } Token;
 
 
@@ -35,7 +36,7 @@ void free_token_list(TokenList* tl);
 Token create_token();
 Token create_num_token(double num);
 Token create_op_token(char c);
-Token create_func_token(FunctionId function_id);
+Token create_func_token(FunctionId function_id, int argc);
 
 ErrorCode add_token(TokenList* tl, Token t);
 int compare_token(Token t1, Token t2);

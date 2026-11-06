@@ -1,5 +1,7 @@
 #include "operators.h"
 #include <math.h>
+#include <stdlib.h>
+
 static char operator_associativity(char op) {
 	char associativity = 'L';
 	if (op == '^')
@@ -50,7 +52,7 @@ static double resolve_operation(double lo, double ro, char operation)
 	case '^':
 		return pow(lo, ro);
 	case '~':
-		return -1 * ro;
+		return -1 * lo;
 	case '+':
 		return lo + ro;
 	case '-':
@@ -82,10 +84,8 @@ static int validate_logic(double lo, double ro, char operation) {
 	}
 }
 
-static int operands_needed(const Token* t) {
+int operands_needed(const Token* t) {
 	if (t->operation == '~')
-		return 1;
-	else if (t->type == TOK_FUNCTION)
 		return 1;
 	else if (t->type == TOK_OPERATOR)
 		return 2;
@@ -93,35 +93,30 @@ static int operands_needed(const Token* t) {
 		return 0;
 }
 
-static ErrorCode validate_stack_and_pop(Stack* stack, const Token* t, double* lo, double* ro) {
-	int error_code = NO_ERROR;
-	int needed = operands_needed(t);
-	if (needed == 0 || stack->top + 1 < needed) {
-		error_code = PARSING_ERROR;
-	}
-	else {
-		if (needed >= 1)
-			*ro = pop_stack(stack).number;
-		if (needed >= 2)
-			*lo = pop_stack(stack).number;
-	}
-	return error_code;
-}
 
 ErrorCode apply_operator(Stack* stack, Token t) {
 	double ro = 0;
 	double lo = 0;
-	ErrorCode error_code = validate_stack_and_pop(stack, &t, &lo, &ro);
+	double operands[] = { 0.0, 0.0 };
+	if (operands == NULL)
+		return MEMORY_ERROR;
+	ErrorCode error_code = validate_stack_and_pop(stack, t, operands);
 	if (error_code)
-		return error_code;
+		goto cleanup_on_error;
+	if (t.argc > 0)
+		lo = operands[0];
+	if (t.argc > 1)
+		ro = operands[1];
+
 	if (!validate_logic(lo, ro, t.operation)) {
 		error_code = LOGICAL_ERROR;
-		return error_code;
+		goto cleanup_on_error;
 	}
 	Token result = create_num_token(resolve_operation(lo, ro, t.operation));
 	if (push_to_stack(stack, result)) {
 		error_code = MEMORY_ERROR;
-		return error_code;
+		goto cleanup_on_error;
 	}
+cleanup_on_error:
 	return error_code;
 }
