@@ -180,12 +180,19 @@
     <ClCompile Include="calculator_in_c.c" />
     <ClCompile Include="calculator_tests.c" />
     <ClCompile Include="calculator_util.c" />
+    <ClCompile Include="operators.c" />
+    <ClCompile Include="parser.c" />
+    <ClCompile Include="rpn_transformer.c" />
     <ClCompile Include="token.c" />
     <ClCompile Include="stack.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="calculator.h" />
+    <ClInclude Include="calculator_data.h" />
     <ClInclude Include="calculator_tests.h" />
+    <ClInclude Include="operators.h" />
+    <ClInclude Include="parser.h" />
+    <ClInclude Include="rpn_transformer.h" />
     <ClInclude Include="token.h" />
     <ClInclude Include="stack.h" />
     <ClInclude Include="calculator_util.h" />
