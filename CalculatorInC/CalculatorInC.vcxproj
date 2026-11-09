@@ -189,6 +189,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="calculator.h" />
+    <ClInclude Include="calculator_in_c.h" />
     <ClInclude Include="calculator_data.h" />
     <ClInclude Include="calculator_tests.h" />
     <ClInclude Include="operators.h" />
