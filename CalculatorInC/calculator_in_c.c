@@ -41,7 +41,7 @@ void interactive_mode_run() {
 			printf("Answer: %.10g\n", answer);
 		}
 		else if (error_code == MEMORY_ERROR) {
-			printf("Memory allocation error\n");
+			printf("Memory allocation or overflow error\n");
 		}
 		else if (error_code == PARSING_ERROR) {
 			printf("Parsing error\n");
@@ -95,7 +95,7 @@ void batch_mode_run(char* input_file_name, char* output_file_name) {
 		thread_pool_init(threads, NUM_CORES, queue, results);
 	}
 	int id = 0;
-	while (fgets(line, sizeof(line), input_file_pointer)) {
+	while (id < MAX_NUM_LINES && fgets(line, sizeof(line), input_file_pointer)) {
 		//TODO: handle too long expression
 		/*if (strchr(line, '\n') == NULL && !feof(stdin)) {
 			while (getchar() != '\n' && !feof(stdin)) {}
@@ -114,17 +114,18 @@ void batch_mode_run(char* input_file_name, char* output_file_name) {
 		if (parallel_processing) {
 			Task* task = malloc(sizeof(Task));
 			task->id = id;
-			strcpy_s(task->expression, 120, line);
+			strcpy_s(task->expression, MAX_LINE_LENGTH, line);
 			enqueue_task(queue, task);
 			id++;
 		}
 		else {
-			int error_code = process_line(line, length, &answer, &has_answer);
-			print_results(error_code, output_file_pointer, answer);
+			ErrorCode error_code = process_line(line, length, &answer, &has_answer);
+			print_results(output_file_pointer, error_code, answer);
 		}
-		if (id > 20)
-			break;
 	}
+	if (id == MAX_NUM_LINES && fgets(line, sizeof(line), input_file_pointer) != NULL)
+		fprintf(stderr, "Input exceeds %d lines; remaining lines skipped\n", MAX_NUM_LINES);
+
 	if (input_file_pointer != stdin) {
 		fclose(input_file_pointer);
 	}
@@ -137,6 +138,7 @@ void batch_mode_run(char* input_file_name, char* output_file_name) {
 		}
 
 		free(results);
+		free(queue->tasks);
 		free(queue);
 		free(threads);
 	}

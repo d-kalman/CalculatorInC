@@ -100,7 +100,7 @@ ErrorCode resolve(const TokenList* token_list, double* out_answer)
 	return error_code;
 }
 
-ErrorCode process_line(const char* string, int size, double* answer, int* has_previous_answer)
+ErrorCode process_line(const char* string, size_t size, double* answer, int* has_previous_answer)
 {
 	TokenList* token_list = NULL;
 	AnswerState ans_state = { .has_previous_answer = *has_previous_answer, .previous_answer = *answer };
