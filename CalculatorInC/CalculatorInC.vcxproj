@@ -180,6 +180,8 @@
     <ClCompile Include="calculator_in_c.c" />
     <ClCompile Include="calculator_tests.c" />
     <ClCompile Include="calculator_util.c" />
+    <ClCompile Include="call_stack.c" />
+    <ClCompile Include="function.c" />
     <ClCompile Include="operators.c" />
     <ClCompile Include="parser.c" />
     <ClCompile Include="rpn_transformer.c" />
@@ -192,6 +194,8 @@
     <ClInclude Include="calculator_in_c.h" />
     <ClInclude Include="calculator_data.h" />
     <ClInclude Include="calculator_tests.h" />
+    <ClInclude Include="call_stack.h" />
+    <ClInclude Include="function.h" />
     <ClInclude Include="operators.h" />
     <ClInclude Include="parser.h" />
     <ClInclude Include="rpn_transformer.h" />

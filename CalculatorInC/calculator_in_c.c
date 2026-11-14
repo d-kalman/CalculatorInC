@@ -52,6 +52,9 @@ void interactive_mode_run() {
 		else if (error_code == LOGICAL_ERROR) {
 			printf("Logical error\n");
 		}
+		else if (error_code == ARITY_ERROR) {
+			printf("Logical error\n");
+		}
 		else {
 			printf("Unknown error\n");
 		}

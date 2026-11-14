@@ -188,6 +188,28 @@ void run_resolve_test_suite()
 		{ "(2 + )", 0, PARSING_ERROR, 0, 0},
 		{ "2*()", 0, PARSING_ERROR, 0, 0},
 		{ "(-)", 0, PARSING_ERROR, 0, 0},		
+		//Functions
+		{ "sin(0)",            0.0,                  NO_ERROR, 0, 0 },
+		{ "cos(0)",            1.0,                  NO_ERROR, 0, 0 },
+		{ "abs(-3.5)",         3.5,                  NO_ERROR, 0, 0 },
+		{ "sin(1+2)",          0.1411200080598672,   NO_ERROR, 0, 0 },
+		{ "abs(-2)*3",         6.0,                  NO_ERROR, 0, 0 },
+		{ "sin(2)*cos(2)",    -0.3784012476539642,   NO_ERROR, 0, 0 },
+		{ "sin(1)+cos(2)",     0.4253241482607541,   NO_ERROR, 0, 0 },
+		//Nested calls
+		{ "sin(cos(0))",       0.8414709848078965,   NO_ERROR, 0, 0 },
+		{ "abs(abs(-2))",      2.0,                  NO_ERROR, 0, 0 },
+		//Function structure/arity errors
+		{ "sin()",             0, PARSING_ERROR, 0, 0 },
+		{ "sin(1,)",           0, PARSING_ERROR, 0, 0 },
+		{ "sin(,1)",           0, PARSING_ERROR, 0, 0 },
+		{ "sin(1,,2)",         0, PARSING_ERROR, 0, 0 },
+		{ "(1,2)",             0, PARSING_ERROR, 0, 0 },
+		{ "sin((1,2))",        0, PARSING_ERROR, 0, 0 },
+		{ "sin(1",             0, PARSING_ERROR, 0, 0 },
+		{ "sin 1",             0, PARSING_ERROR, 0, 0 },
+		{ "foo(1)",            0, PARSING_ERROR, 0, 0 },
+		{ "sin(1,2)",          0, ARITY_ERROR, 0, 0 },
 	};
 	int tests_passed = 0;
 	int tests_run = (int)(sizeof(cases) / sizeof(cases[0]));

@@ -1,22 +1,19 @@
 #pragma once
 
+#define MAX_FUNCTION_ARGS 8
+
 #include <stddef.h>
 #include "calculator_util.h"
+
 typedef enum {
     TOK_NUMBER,
     TOK_OPERATOR,
     TOK_FUNCTION,   // sin, cos, abs...
     TOK_LPAREN,
     TOK_RPAREN,
+    TOK_COMMA,
     TOK_INVALID
 } TokenType;
-
-typedef enum {
-    NOT_FUNCTION,
-    SIN,
-    COS,
-    ABS
-} FunctionId;
 
 typedef struct Token_t
 {
@@ -24,6 +21,7 @@ typedef struct Token_t
 	double number;
 	char operation;
     FunctionId function_id;
+    int argc;
 } Token;
 
 
@@ -39,7 +37,8 @@ void free_token_list(TokenList* tl);
 Token create_token();
 Token create_num_token(double num);
 Token create_op_token(char c);
-Token create_func_token(FunctionId function_id);
+Token create_func_token(FunctionId function_id, int argc);
+Token create_comma_token();
 
 ErrorCode add_token(TokenList* tl, Token t);
 int compare_token(Token t1, Token t2);

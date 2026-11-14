@@ -49,6 +49,18 @@ Token pop_stack(Stack* stack) {
 	}
 }
 
+ErrorCode pop_operands(Stack* stack, int count, double* out) {
+	if (!stack || !out || count < 0 || count > stack->top + 1)
+		return PARSING_ERROR;
+	for (int i = count - 1; i >= 0; --i) {
+		Token t = pop_stack(stack);
+		if (t.type != TOK_NUMBER)
+			return PARSING_ERROR;
+		out[i] = t.number;
+	}
+	return NO_ERROR;
+}
+
 void stack_tests()
 {
 	Stack stack;

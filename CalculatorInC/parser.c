@@ -40,6 +40,7 @@ static int allowed_input_operation(char c)
 	}
 	return allowed;
 }
+
 ErrorCode add_previous_answer(Input* input, ParserState* state, AnswerState answer_state) {
 	ErrorCode error_code = NO_ERROR;
 	//If the line reuses the previous answer, insert it as the first parseable
@@ -88,9 +89,12 @@ static ErrorCode parse_number(Input* input, ParserState* state) {
 static ErrorCode parse_function_token(Input* input, ParserState* state) {
 	ErrorCode error_code = NO_ERROR;
 	int name_index = 0;
-	char name[MAX_NUMBER_LENGTH + 1] = { '#' };
+	char name[MAX_NUMBER_LENGTH + 1] = { 0 };
 
-	while (input->index < input->size && input->line[input->index] != '(')
+	//Lexical only: a function name is a run of lowercase letters.
+	//Whether it is followed by '(' is checked by to_rpn.
+	while (input->index < input->size &&
+		input->line[input->index] >= 'a' && input->line[input->index] <= 'z')
 	{
 		if (name_index >= MAX_NUMBER_LENGTH) {
 			error_code = INPUT_ERROR;
@@ -100,21 +104,16 @@ static ErrorCode parse_function_token(Input* input, ParserState* state) {
 		name_index++;
 		input->index++;
 	}
-	if (input->line[input->index] != '(') {
-		error_code = INPUT_ERROR;
-		return error_code;
-	}
 	input->index--;
-	if (name_index > 0)
-	{
-		name[name_index] = '\0';
-		char* endptr = NULL;
+	name[name_index] = '\0';
 
-		Token t = create_func_token(get_function_id(name));
-		if (t.function_id == NOT_FUNCTION)
-			error_code = PARSING_ERROR;
-		else
-			error_code = add_token(state->parsed_tokens, t);
+	FunctionId function_id = get_function_id(name);
+	if (function_id == NOT_FUNCTION) {
+		error_code = PARSING_ERROR;
+	}
+	else {
+		Token t = create_func_token(function_id, 0);
+		error_code = add_token(state->parsed_tokens, t);
 	}
 	return error_code;
 }
@@ -135,7 +134,10 @@ ErrorCode tokenize(Input* input, ParserState* state) {
 		else if (current_char >= 'a' && current_char <= 'z') {
 			error_code = parse_function_token(input, state);
 		}
-
+		else if (current_char == ',') {
+			Token t = create_comma_token();
+			error_code = add_token(state->parsed_tokens, t);
+		}
 		else if (current_char == '(' || current_char == ')') {
 			Token t = create_op_token(current_char);
 			error_code = add_token(state->parsed_tokens, t);
