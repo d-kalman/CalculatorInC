@@ -11,6 +11,7 @@ typedef enum {
     TOK_FUNCTION,   // sin, cos, abs...
     TOK_LPAREN,
     TOK_RPAREN,
+    TOK_COMMA,
     TOK_INVALID
 } TokenType;
 
@@ -37,6 +38,7 @@ Token create_token();
 Token create_num_token(double num);
 Token create_op_token(char c);
 Token create_func_token(FunctionId function_id, int argc);
+Token create_comma_token();
 
 ErrorCode add_token(TokenList* tl, Token t);
 int compare_token(Token t1, Token t2);

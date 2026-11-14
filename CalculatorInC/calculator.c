@@ -1,10 +1,9 @@
-#include <assert.h>
-
 #include "calculator.h"
 #include "stack.h"
 #include "parser.h"
 #include "rpn_transformer.h"
 #include "operators.h"
+#include "function.h"
 
 ErrorCode parse(const char* l_string, size_t l_size, TokenList** out_tokens, AnswerState answer_state) {
 
@@ -29,7 +28,9 @@ ErrorCode parse(const char* l_string, size_t l_size, TokenList** out_tokens, Ans
 	ParserState parser_state = { .parsed_tokens = parsed_tokens,
 								.rpn_tokens = rpn_tokens,
 								.operator_stack_p = operator_stack_p,
-								.operator_expected = 0 };
+								.operator_expected = 0,
+								.paren_depth = 0,
+								.call_stack = { 0 } };
 	ParserState* parser_state_p = &parser_state;
 	ErrorCode error_code = NO_ERROR;
 
@@ -78,14 +79,18 @@ ErrorCode resolve(const TokenList* token_list, double* out_answer)
 			}
 		}
 		else if (t.type == TOK_FUNCTION) {
-			//Function support is not implemented yet
-			error_code = PARSING_ERROR;
-			break;
+			error_code = apply_function(stack_p, t);
+			if (error_code)
+				break;
 		}
-		else {
+		else if (t.type == TOK_OPERATOR) {
 			error_code = apply_operator(stack_p, t);
 			if (error_code)
 				break;
+		}
+		else {
+			error_code = PARSING_ERROR;
+			break;
 		}
 		index++;
 	}

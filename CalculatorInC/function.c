@@ -1,86 +1,82 @@
 #include <math.h>
-#include <stdio.h>
 
 #include "function.h"
 
-//Ok, so what do I need?
-//I need the function implementations
-//I have access to the functions through the function pointer
-//Now I have to apply said function
-
-typedef ErrorCode(*FunctionFn)(const double* args, int argc, double* out);
+typedef ErrorCode (*FunctionFn)(const double* args, int argc, double* out);
 
 typedef struct Function_t {
-    FunctionFn function;
-    int min_args;
-    int max_args;
-    const char* name;
+	FunctionFn fn;
+	int min_args;
+	int max_args;
+	const char* name;
 } Function;
 
-static ErrorCode apply_sin(const double* args, int argc, double* out) { 
-    *out = sin(args[0]);
-    return NO_ERROR;
+static ErrorCode apply_sin(const double* args, int argc, double* out)
+{
+	(void)argc;
+	*out = sin(args[0]);
+	return NO_ERROR;
 }
-static ErrorCode apply_cos(const double* args, int argc, double* out) {
-    *out = cos(args[0]);
-    return NO_ERROR;
+
+static ErrorCode apply_cos(const double* args, int argc, double* out)
+{
+	(void)argc;
+	*out = cos(args[0]);
+	return NO_ERROR;
 }
-static ErrorCode apply_abs(const double* args, int argc, double* out) {
-    *out = fabs(args[0]);
-    return NO_ERROR;
+
+static ErrorCode apply_abs(const double* args, int argc, double* out)
+{
+	(void)argc;
+	*out = fabs(args[0]);
+	return NO_ERROR;
 }
 
 static const Function FUNCTIONS[FUNCTION_COUNT] = {
-    [SIN] = { apply_sin, 1, 1, "sin" },
-    [COS] = { apply_cos, 1, 1, "cos" },
-    [ABS] = { apply_abs, 1, 1, "abs" },
+	[SIN] = { apply_sin, 1, 1, "sin" },
+	[COS] = { apply_cos, 1, 1, "cos" },
+	[ABS] = { apply_abs, 1, 1, "abs" },
 };
 
-static const Function* get_function(FunctionId id) { 
-    if (id <= NOT_FUNCTION || id >= FUNCTION_COUNT)
-        return NULL;
-    return &FUNCTIONS[id];
-}
-
-ErrorCode apply_function(Stack* stack, Token t, double* out_result, int argc)
+static const Function* get_function(FunctionId id)
 {
-	ErrorCode error_code = NO_ERROR;
-    if (t.function_id == NOT_FUNCTION)
-        return PARSING_ERROR;
-    const Function* func = get_function(t.function_id);
-    if (argc > func->max_args || argc < func->min_args)
-        return PARSING_ERROR;
-
-    double* args = calloc(argc, sizeof(double));
-    if (args == NULL)
-        return MEMORY_ERROR;
-    FunctionFn callable = func->function;
-
-    error_code = validate_stack_and_pop(stack, t, args);
-    if (!error_code) {
-        callable(args, argc, out_result);
-    }
-    free(args);
-	return error_code;
+	if (id <= NOT_FUNCTION || id >= FUNCTION_COUNT)
+		return NULL;
+	return &FUNCTIONS[id];
+}
+int validate_function_argc(FunctionId id, int argc) {
+	if (argc > MAX_FUNCTION_ARGS)
+		return 0;
+	const Function* fn = get_function(id);
+	//Unbounded
+	if (fn != NULL && argc >= fn->min_args && (fn->max_args < 0 || argc <= fn->max_args))
+		return 1;
+	else
+		return 0;
 }
 
-int function_test() {
-    printf("Function tests\n");
-    Stack stack;
-    Stack* stack_p = &stack;
+ErrorCode apply_function(Stack* stack, Token t)
+{
+	const Function* func = get_function(t.function_id);
+	if (func == NULL || func->fn == NULL)
+		return PARSING_ERROR;
 
-    initialize_stack(stack_p);
-    Token t = create_num_token(1.57);
-    push_to_stack(stack_p, t);
-    Token t_op = create_func_token(SIN, 1);
-    double result = 0.0;
-    apply_function(stack_p, t_op, &result, 1);
-    printf("%f\n", result);
+	//The token carries the arity of this particular call
+	int argc = t.argc;
+	if(!validate_function_argc(t.function_id, argc)) {
+		return ARITY_ERROR;
+	}
+	double args[MAX_FUNCTION_ARGS] = { 0.0 };
+	ErrorCode error_code = pop_operands(stack, argc, args);
+	if (error_code)
+		return error_code;
 
-    t = create_num_token(-1.57);
-    push_to_stack(stack_p, t);
-    t_op = create_func_token(ABS, 1);
-    apply_function(stack_p, t_op, &result, 1);
-    printf("%f\n", result);
-    return 0;
+	double result = 0.0;
+	error_code = func->fn(args, argc, &result);
+	if (error_code)
+		return error_code;
+
+	if (push_to_stack(stack, create_num_token(result)))
+		return MEMORY_ERROR;
+	return NO_ERROR;
 }

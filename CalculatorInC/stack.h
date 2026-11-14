@@ -3,8 +3,6 @@
 #include "token.h"
 #include "calculator_util.h"
 
-#define MAX_STACK_SIZE 120
-
 typedef struct Stack_t {
 	Token token_stack[MAX_STACK_SIZE];
 	int top;
@@ -18,6 +16,6 @@ int is_full(Stack* stack);
 int is_empty(Stack* stack);
 Token inspect(Stack* stack);
 
-ErrorCode validate_stack_and_pop(Stack* stack, Token token, double* args);
+ErrorCode pop_operands(Stack* stack, int count, double* out);
 
 void stack_tests();

@@ -24,7 +24,12 @@ int compare_token(Token t1, Token t2) {
 		t1.operation == t2.operation &&
 		t1.function_id == t2.function_id
 		)
+	{
+		//Only the function token carries meaningful per-call arity
+		if (t1.type == TOK_FUNCTION && t1.argc != t2.argc)
+			return 0;
 		return 1;
+	}
 	else
 		return 0;
 }
@@ -54,19 +59,25 @@ void free_token_list(TokenList* tl) {
 
 Token create_token()
 {
-	Token t = {.type = TOK_INVALID, .number = 0, .operation = '?', .function_id = NOT_FUNCTION };
+	Token t = {.type = TOK_INVALID, .number = 0, .operation = '?', .function_id = NOT_FUNCTION, .argc = 0 };
 	return t;
 }
 
 Token create_num_token(double num)
 {
-	Token t = { .type = TOK_NUMBER, .number = num, .operation = '#', .function_id = NOT_FUNCTION };
+	Token t = { .type = TOK_NUMBER, .number = num, .operation = '#', .function_id = NOT_FUNCTION, .argc = 0 };
 	return t;
 }
 
 Token create_func_token(FunctionId function_id, int argc)
 {
 	Token t = {.type = TOK_FUNCTION, .number = 0, .operation = 'f', .function_id = function_id, .argc = argc};
+	return t;
+}
+
+Token create_comma_token()
+{
+	Token t = { .type = TOK_COMMA, .number = 0, .operation = ',', .function_id = NOT_FUNCTION, .argc = 0 };
 	return t;
 }
 
@@ -109,7 +120,13 @@ void print_token(Token t)
 	else if (t.type == TOK_OPERATOR)
 		printf("%c ", t.operation);
 	else if (t.type == TOK_FUNCTION)
-		printf("%s ", "Function");
+		printf("%s(%d) ", "Function", t.argc);
+	else if (t.type == TOK_LPAREN)
+		printf("( ");
+	else if (t.type == TOK_RPAREN)
+		printf(") ");
+	else if (t.type == TOK_COMMA)
+		printf(", ");
 	else
 		printf("Unknown\n");
 }

@@ -49,17 +49,16 @@ Token pop_stack(Stack* stack) {
 	}
 }
 
-ErrorCode validate_stack_and_pop(Stack* stack, Token token, double* args) {
-	int error_code = NO_ERROR;
-	for (int i = token.argc - 1; i >= 0; --i) {
+ErrorCode pop_operands(Stack* stack, int count, double* out) {
+	if (!stack || !out || count < 0 || count > stack->top + 1)
+		return PARSING_ERROR;
+	for (int i = count - 1; i >= 0; --i) {
 		Token t = pop_stack(stack);
-		if (t.type == TOK_INVALID) {
-			error_code = PARSING_ERROR;
-			break;
-		}
-		args[i] = t.number;
+		if (t.type != TOK_NUMBER)
+			return PARSING_ERROR;
+		out[i] = t.number;
 	}
-	return error_code;
+	return NO_ERROR;
 }
 
 void stack_tests()
